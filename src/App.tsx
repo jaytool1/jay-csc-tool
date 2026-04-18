@@ -19,6 +19,7 @@ import { TermsOfService } from './components/TermsOfService';
 export type Page = 'home' | 'pan-resizer' | 'id-maker' | 'resume-maker' | 'signature-resizer' | 'whatsapp-print' | 'image-to-pdf' | 'image-resizer' | 'pdf-merge' | 'pdf-split' | 'pdf-rotate' | 'text-case' | 'word-counter' | 'password-gen' | 'password-strength' | 'privacy-policy' | 'terms-of-service';
 
 export default function App() {
+  // Main application routing state
   const [currentPage, setCurrentPage] = useState<Page>('home');
 
   const renderPage = () => {
