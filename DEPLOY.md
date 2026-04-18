@@ -16,55 +16,11 @@ This guide explains how to host your **Jay CSC Tool** website on GitHub Pages.
    ```
 
 ## Step 2: Automatic Deployment (Recommended)
-The easiest way is to use **GitHub Actions**. 
+The easiest way is to use **GitHub Actions**.
 
-1. Create a file at `.github/workflows/deploy.yml` with the following content:
-   ```yaml
-   name: Deploy to GitHub Pages
-
-   on:
-     push:
-       branches: [main]
-
-   permissions:
-     contents: read
-     pages: write
-     id-token: write
-
-   jobs:
-     build-and-deploy:
-       runs-on: ubuntu-latest
-       steps:
-         - name: Checkout
-           uses: actions/checkout@v4
-
-         - name: Set up Node
-           uses: actions/setup-node@v4
-           with:
-             node-version: 20
-             cache: 'npm'
-
-         - name: Install dependencies
-           run: npm install
-
-         - name: Build
-           run: npm run build
-
-         - name: Setup Pages
-           uses: actions/configure-pages@v4
-
-         - name: Upload artifact
-           uses: actions/upload-pages-artifact@v3
-           with:
-             path: './dist'
-
-         - name: Deploy to GitHub Pages
-           id: deployment
-           uses: actions/deploy-pages@v4
-   ```
-
-2. Go to your repository on GitHub -> **Settings** -> **Pages**.
-3. Under **Build and deployment** -> **Source**, select **GitHub Actions**.
+> [!IMPORTANT]
+> **CRITICAL SETUP**: Go to your repository on GitHub -> **Settings** -> **Pages**.
+> Under **Build and deployment** -> **Source**, you **MUST** select **GitHub Actions** (instead of "Deploy from a branch"). If you don't change this, the deployment will fail with a "Missing environment" error.
 
 ## Step 3: Enjoy your live site!
 Once the GitHub Action finishes, your site will be live at:
