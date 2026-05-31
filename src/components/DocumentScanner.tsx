@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Page } from '../App';
-import { UploadCloud, Printer, Download, Image as ImageIcon, CheckCircle2, RotateCw, Settings2, Crop as CropIcon, Loader2, Sparkles } from 'lucide-react';
+import { UploadCloud, Printer, Download, Image as ImageIcon, CheckCircle2, RotateCw, Settings2, Crop as CropIcon, Loader2, Sparkles, ArrowRight } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -22,6 +22,7 @@ interface ImageState {
   contrast: number;
   sharpness: number;
   rotation: number;
+  resultRotation: number;
   showBorder: boolean;
   autoCrop?: Crop;
 }
@@ -33,6 +34,7 @@ const defaultImageState: ImageState = {
   contrast: 100,
   sharpness: 0,
   rotation: 0,
+  resultRotation: 0,
   showBorder: true,
 };
 
@@ -181,17 +183,25 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
     }
   };
 
+  const getEffectiveAspect = () => {
+    if (!lockAspect) return undefined;
+    const rotation = (currentImgState.rotation % 360 + 360) % 360;
+    const isPortrait = (rotation >= 45 && rotation < 135) || (rotation >= 225 && rotation < 315);
+    return isPortrait ? (1 / ID_CARD_ASPECT) : ID_CARD_ASPECT;
+  };
+
   const snapToEdges = () => {
     if (!imgRef.current) return;
     const { width, height } = imgRef.current;
     
     if (lockAspect) {
+      const currentAspect = getEffectiveAspect() || ID_CARD_ASPECT;
       let targetWidth = width;
-      let targetHeight = width / ID_CARD_ASPECT;
+      let targetHeight = width / currentAspect;
       
       if (targetHeight > height) {
         targetHeight = height;
-        targetWidth = height * ID_CARD_ASPECT;
+        targetWidth = height * currentAspect;
       }
       
       const x = (width - targetWidth) / 2;
@@ -235,7 +245,12 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
 
     const currentImgState = currentEditSide === 'front' ? frontImage : backImage;
 
+    // Use high quality settings
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
     const sharpenValue = currentImgState.sharpness / 100;
+    // Improved filter string with white background context
     const filterString = `brightness(${currentImgState.brightness}%) contrast(${currentImgState.contrast + (currentImgState.sharpness / 2)}%) saturate(${100 + (currentImgState.sharpness / 4)}%)`;
 
     if (completedCrop?.width && completedCrop?.height) {
@@ -246,9 +261,13 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
       canvas.width = completedCrop.width * scaleX;
       canvas.height = completedCrop.height * scaleY;
       
-      ctx.imageSmoothingQuality = 'high';
+      // Ensure white background for JPEG exports to prevent black areas
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
       ctx.filter = filterString;
       
+      ctx.save();
       ctx.translate(canvas.width / 2, canvas.height / 2);
       ctx.rotate((currentImgState.rotation * Math.PI) / 180);
       ctx.translate(-canvas.width / 2, -canvas.height / 2);
@@ -264,15 +283,23 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
         canvas.width,
         canvas.height
       );
+      ctx.restore();
     } else {
       // Draw full image if no crop
       canvas.width = image.naturalWidth;
       canvas.height = image.naturalHeight;
+
+      // Ensure white background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
       ctx.filter = filterString;
       
+      ctx.save();
       ctx.translate(canvas.width / 2, canvas.height / 2);
       ctx.rotate((currentImgState.rotation * Math.PI) / 180);
       ctx.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
+      ctx.restore();
     }
 
     const finalUrl = canvas.toDataURL('image/jpeg', 0.95);
@@ -321,6 +348,10 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
 
       ctx.scale(pixelRatio, pixelRatio);
       ctx.imageSmoothingQuality = 'high';
+
+      // Fill white background for preview canvas
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width / pixelRatio, canvas.height / pixelRatio);
 
       const cropX = completedCrop.x * scaleX;
       const cropY = completedCrop.y * scaleY;
@@ -403,24 +434,47 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
       const gapPx = getMMtoPX(10); // 10mm gap
       const topMarginPx = getMMtoPX(25);
 
-      const drawCard = (img: HTMLImageElement, x: number, y: number) => {
+      const drawCard = (img: HTMLImageElement, x: number, y: number, resultRotation: number = 0) => {
+        ctx.save();
+        
+        const rotation = (resultRotation % 360 + 360) % 360;
+        const isPortrait = rotation === 90 || rotation === 270;
+        
+        // Final card dimensions on paper
+        const finalW = isPortrait ? cardHPx : cardWPx;
+        const finalH = isPortrait ? cardWPx : cardHPx;
+
         if (showBorders) {
-          ctx.strokeStyle = '#cccccc'; // Light gray hex
+          ctx.strokeStyle = '#cccccc';
           ctx.lineWidth = getMMtoPX(0.2);
-          ctx.strokeRect(x - 1, y - 1, cardWPx + 2, cardHPx + 2);
+          ctx.strokeRect(x - 1, y - 1, finalW + 2, finalH + 2);
         }
-        ctx.drawImage(img, x, y, cardWPx, cardHPx);
+
+        ctx.translate(x + finalW / 2, y + finalH / 2);
+        ctx.rotate((rotation * Math.PI) / 180);
+        
+        // Draw the image. Since we rotated the canvas, width/height for drawImage 
+        // are always the card's logical W/H (before rotation swap)
+        ctx.drawImage(img, -cardWPx / 2, -cardHPx / 2, cardWPx, cardHPx);
+        
+        ctx.restore();
       };
 
       if (layout === 'vertical') {
-        const x = (widthPx - cardWPx) / 2;
-        if (frontImg) drawCard(frontImg, x, topMarginPx);
-        if (backImg) drawCard(backImg, x, topMarginPx + cardHPx + gapPx);
+        const xFront = (widthPx - ( ( (frontImage.resultRotation % 180) === 90) ? cardHPx : cardWPx )) / 2;
+        if (frontImg) drawCard(frontImg, xFront, topMarginPx, frontImage.resultRotation);
+        
+        const frontH = ( (frontImage.resultRotation % 180) === 90) ? cardWPx : cardHPx;
+        const xBack = (widthPx - ( ( (backImage.resultRotation % 180) === 90) ? cardHPx : cardWPx )) / 2;
+        if (backImg) drawCard(backImg, xBack, topMarginPx + frontH + gapPx, backImage.resultRotation);
       } else {
-        const totalW = cardWPx * 2 + gapPx;
+        const frontW = ( (frontImage.resultRotation % 180) === 90) ? cardHPx : cardWPx;
+        const backW = ( (backImage.resultRotation % 180) === 90) ? cardHPx : cardWPx;
+        const totalW = frontW + (backImg ? backW + gapPx : 0);
         const startX = (widthPx - totalW) / 2;
-        if (frontImg) drawCard(frontImg, startX, topMarginPx);
-        if (backImg) drawCard(backImg, startX + cardWPx + gapPx, topMarginPx);
+        
+        if (frontImg) drawCard(frontImg, startX, topMarginPx, frontImage.resultRotation);
+        if (backImg) drawCard(backImg, startX + frontW + gapPx, topMarginPx, backImage.resultRotation);
       }
 
       return canvas;
@@ -441,7 +495,7 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
       const pdf = new jsPDF('p', 'mm', 'a4');
       
       pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
-      pdf.save('Aadhar_Print.pdf');
+      pdf.save('Document_Print.pdf');
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
@@ -458,7 +512,7 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
       if (!canvas) throw new Error("Could not generate canvas");
       
       const link = document.createElement('a');
-      link.download = 'Aadhar_Print.jpg';
+      link.download = 'Document_Print.jpg';
       link.href = canvas.toDataURL('image/jpeg', 0.95);
       link.click();
     } catch (error) {
@@ -487,88 +541,108 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Custom styles for ReactCrop handles */}
+      <style>{`
+        .ReactCrop__drag-handle {
+          width: 12px !important;
+          height: 12px !important;
+          background-color: #7b61ff !important;
+          border-radius: 50% !important;
+          border: 2px solid white !important;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+        }
+        .ReactCrop__drag-handle:after {
+          display: none !important;
+        }
+        .ReactCrop__crop-selection {
+          border: 2px solid #7b61ff !important;
+          box-shadow: 0 0 0 9999em rgba(0, 0, 0, 0.5) !important;
+        }
+      `}</style>
+
       {/* Header */}
       <div className="text-center mb-10">
-        <h1 className="text-3xl font-bold text-white mb-4">Aadhar / Document Print Tool</h1>
-        <p className="text-white/60 max-w-2xl mx-auto">
-          Scan, crop, and print Aadhar cards perfectly on A4 paper. 100% Secure & Private.
+        <h1 className="text-4xl font-[900] text-slate-900 mb-4 tracking-tight">WhatsApp Print Tool</h1>
+        <p className="text-slate-500 max-w-2xl mx-auto font-medium">
+          Scan, crop, and print WhatsApp images perfectly on A4 paper. 100% Secure & Private.
         </p>
       </div>
 
       {/* Steps Indicator */}
-      <div className="flex justify-center items-center mb-10">
-        <div className={`flex items-center ${step >= 1 ? 'text-[#00d2ff]' : 'text-white/40'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold border-2 ${step >= 1 ? 'border-[#00d2ff] bg-[#00d2ff]/20' : 'border-white/20'}`}>1</div>
-          <span className="ml-2 font-medium hidden sm:block">Upload</span>
+      <div className="flex justify-center items-center mb-12">
+        <div className={`flex items-center ${step >= 1 ? 'text-primary' : 'text-slate-300'}`}>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black border-2 transition-all ${step >= 1 ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-slate-200 bg-slate-50'}`}>1</div>
+          <span className="ml-3 font-bold hidden sm:block uppercase tracking-wider text-xs">Upload</span>
         </div>
-        <div className={`w-16 h-0.5 mx-4 ${step >= 2 ? 'bg-[#00d2ff]' : 'bg-white/20'}`}></div>
-        <div className={`flex items-center ${step >= 2 ? 'text-[#00d2ff]' : 'text-white/40'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold border-2 ${step >= 2 ? 'border-[#00d2ff] bg-[#00d2ff]/20' : 'border-white/20'}`}>2</div>
-          <span className="ml-2 font-medium hidden sm:block">Crop & Edit</span>
+        <div className={`w-16 h-1 mx-4 rounded-full transition-colors ${step >= 2 ? 'bg-primary' : 'bg-slate-100'}`}></div>
+        <div className={`flex items-center ${step >= 2 ? 'text-primary' : 'text-slate-300'}`}>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black border-2 transition-all ${step >= 2 ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-slate-200 bg-slate-50'}`}>2</div>
+          <span className="ml-3 font-bold hidden sm:block uppercase tracking-wider text-xs">Crop & Edit</span>
         </div>
-        <div className={`w-16 h-0.5 mx-4 ${step >= 3 ? 'bg-[#00d2ff]' : 'bg-white/20'}`}></div>
-        <div className={`flex items-center ${step >= 3 ? 'text-[#00d2ff]' : 'text-white/40'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold border-2 ${step >= 3 ? 'border-[#00d2ff] bg-[#00d2ff]/20' : 'border-white/20'}`}>3</div>
-          <span className="ml-2 font-medium hidden sm:block">Export</span>
+        <div className={`w-16 h-1 mx-4 rounded-full transition-colors ${step >= 3 ? 'bg-primary' : 'bg-slate-100'}`}></div>
+        <div className={`flex items-center ${step >= 3 ? 'text-primary' : 'text-slate-300'}`}>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black border-2 transition-all ${step >= 3 ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-slate-200 bg-slate-50'}`}>3</div>
+          <span className="ml-3 font-bold hidden sm:block uppercase tracking-wider text-xs">Export</span>
         </div>
       </div>
 
       {/* Step 1: Upload */}
       {step === 1 && (
-        <div className="glass-panel p-8">
-          <div className="grid md:grid-cols-2 gap-8 mb-8">
+        <div className="glass-panel p-10 bg-white">
+          <div className="grid md:grid-cols-2 gap-10 mb-10">
             {/* Front Side */}
             <div>
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <ImageIcon className="text-[#00d2ff]" /> Front Side
+              <h3 className="text-xl font-[800] text-slate-900 mb-6 flex items-center gap-3 tracking-tight">
+                <ImageIcon className="text-primary" /> Front Side
               </h3>
               <div 
                 {...getFrontProps()} 
-                className="border-2 border-dashed border-white/20 rounded-2xl p-8 text-center cursor-pointer hover:bg-white/5 transition-colors h-64 flex flex-col items-center justify-center relative overflow-hidden"
+                className={`border-2 border-dashed rounded-3xl p-10 text-center cursor-pointer transition-all h-72 flex flex-col items-center justify-center relative overflow-hidden group ${frontImage.originalUrl ? 'border-primary/50 bg-primary/5 shadow-inner shadow-primary/5' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300'}`}
               >
                 <input {...getFrontInputProps()} />
                 {frontImage.originalUrl ? (
                   <>
-                    <img src={frontImage.originalUrl} alt="Front" className="max-h-full object-contain z-10" />
+                    <div className="absolute top-6 left-6 z-30 flex items-center gap-2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200 shadow-sm">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                      <span className="text-[10px] font-[900] text-slate-900 uppercase tracking-widest">Image Loaded</span>
+                    </div>
+                    <img src={frontImage.originalUrl} alt="Front" className="max-h-full object-contain z-10 transition-transform hover:scale-105 duration-500" />
                     {isDetectingFront && (
-                      <div className="absolute inset-0 bg-black/60 z-30 flex flex-col items-center justify-center text-[#00d2ff]">
-                        <Loader2 className="animate-spin mb-2" size={32} />
-                        <span className="text-sm font-bold flex items-center gap-2">
-                          <Sparkles size={16} /> AI SMART DETECTING...
+                      <div className="absolute inset-0 bg-white/80 z-40 flex flex-col items-center justify-center text-primary backdrop-blur-sm">
+                        <Loader2 className="animate-spin mb-4 text-primary" size={48} />
+                        <span className="text-sm font-[900] flex items-center gap-3 tracking-widest bg-white px-6 py-3 rounded-2xl border border-primary/20 shadow-xl">
+                          <Sparkles size={20} className="text-amber-500" /> AI ANALYZING EDGES...
                         </span>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             setIsDetectingFront(false);
                           }}
-                          className="mt-4 px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-xs text-white/80"
+                          className="mt-8 px-6 py-2.5 bg-slate-900 hover:bg-slate-800 rounded-xl text-xs font-bold text-white transition-all shadow-lg"
                         >
-                          Skip AI Detect
+                          Skip AI & Continue
                         </button>
                       </div>
                     )}
                     {frontImage.autoCrop && !isDetectingFront && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (step === 2) setCrop(frontImage.autoCrop);
-                        }}
-                        className="absolute top-4 right-4 z-20 bg-[#00d2ff]/20 text-[#00d2ff] border border-[#00d2ff]/40 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 backdrop-blur-md hover:bg-[#00d2ff]/30 transition-all pointer-events-auto"
-                      >
-                        <Sparkles size={12} /> AI READY
-                      </button>
+                      <div className="absolute top-6 right-6 z-30 bg-emerald-500 text-white px-4 py-2 rounded-full text-[10px] font-black flex items-center gap-2 shadow-lg scale-90 sm:scale-100">
+                        <CheckCircle2 size={14} /> AI READY
+                      </div>
                     )}
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity z-20">
-                      <span className="text-white font-medium bg-black/50 px-4 py-2 rounded-lg">Change Image</span>
+                    <div className="absolute inset-0 bg-slate-900/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-20 backdrop-blur-[4px]">
+                      <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mb-3 border border-white/30">
+                        <RotateCw className="text-white" />
+                      </div>
+                      <span className="text-white text-xs font-black uppercase tracking-widest">Change Image</span>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="w-16 h-16 bg-white/10 text-[#00d2ff] rounded-full flex items-center justify-center mb-4">
-                      <UploadCloud size={32} />
+                    <div className="w-20 h-20 bg-white text-primary rounded-2xl flex items-center justify-center mb-6 shadow-md border border-slate-100 group-hover:scale-110 transition-transform">
+                      <UploadCloud size={40} />
                     </div>
-                    <p className="text-white font-medium">Click or drag front image</p>
-                    <p className="text-white/50 text-sm mt-2">JPG, PNG up to 10MB</p>
+                    <p className="text-slate-900 font-black text-lg tracking-tight mb-2">Click or drag front image</p>
+                    <p className="text-slate-400 text-[10px] uppercase font-black tracking-widest">JPG, PNG, WEBP UP TO 10MB</p>
                   </>
                 )}
               </div>
@@ -576,74 +650,75 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
 
             {/* Back Side */}
             <div>
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <ImageIcon className="text-[#00d2ff]" /> Back Side <span className="text-white/40 text-sm font-normal">(Optional)</span>
+              <h3 className="text-xl font-[800] text-slate-900 mb-6 flex items-center gap-3 tracking-tight">
+                <ImageIcon className="text-primary" /> Back Side <span className="text-slate-400 text-sm font-medium tracking-normal">(Optional)</span>
               </h3>
               <div 
                 {...getBackProps()} 
-                className="border-2 border-dashed border-white/20 rounded-2xl p-8 text-center cursor-pointer hover:bg-white/5 transition-colors h-64 flex flex-col items-center justify-center relative overflow-hidden"
+                className={`border-2 border-dashed rounded-3xl p-10 text-center cursor-pointer transition-all h-72 flex flex-col items-center justify-center relative overflow-hidden group ${backImage.originalUrl ? 'border-primary/50 bg-primary/5 shadow-inner shadow-primary/5' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300'}`}
               >
                 <input {...getBackInputProps()} />
                 {backImage.originalUrl ? (
                   <>
-                    <img src={backImage.originalUrl} alt="Back" className="max-h-full object-contain z-10" />
+                    <div className="absolute top-6 left-6 z-30 flex items-center gap-2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200 shadow-sm">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                      <span className="text-[10px] font-[900] text-slate-900 uppercase tracking-widest">Image Loaded</span>
+                    </div>
+                    <img src={backImage.originalUrl} alt="Back" className="max-h-full object-contain z-10 transition-transform hover:scale-105 duration-500" />
                     {isDetectingBack && (
-                      <div className="absolute inset-0 bg-black/60 z-30 flex flex-col items-center justify-center text-[#00d2ff]">
-                        <Loader2 className="animate-spin mb-2" size={32} />
-                        <span className="text-sm font-bold flex items-center gap-2">
-                          <Sparkles size={16} /> AI SMART DETECTING...
+                      <div className="absolute inset-0 bg-white/80 z-40 flex flex-col items-center justify-center text-primary backdrop-blur-sm">
+                        <Loader2 className="animate-spin mb-4 text-primary" size={48} />
+                        <span className="text-sm font-[900] flex items-center gap-3 tracking-widest bg-white px-6 py-3 rounded-2xl border border-primary/20 shadow-xl">
+                          <Sparkles size={20} className="text-amber-500" /> AI ANALYZING EDGES...
                         </span>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             setIsDetectingBack(false);
                           }}
-                          className="mt-4 px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-xs text-white/80"
+                          className="mt-8 px-6 py-2.5 bg-slate-900 hover:bg-slate-800 rounded-xl text-xs font-bold text-white transition-all shadow-lg"
                         >
-                          Skip AI Detect
+                          Skip AI & Continue
                         </button>
                       </div>
                     )}
                     {backImage.autoCrop && !isDetectingBack && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (step === 2) setCrop(backImage.autoCrop);
-                        }}
-                        className="absolute top-4 right-4 z-20 bg-[#00d2ff]/20 text-[#00d2ff] border border-[#00d2ff]/40 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 backdrop-blur-md hover:bg-[#00d2ff]/30 transition-all pointer-events-auto"
-                      >
-                        <Sparkles size={12} /> AI READY
-                      </button>
+                      <div className="absolute top-6 right-6 z-30 bg-emerald-500 text-white px-4 py-2 rounded-full text-[10px] font-black flex items-center gap-2 shadow-lg scale-90 sm:scale-100">
+                        <CheckCircle2 size={14} /> AI READY
+                      </div>
                     )}
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity z-20">
-                      <span className="text-white font-medium bg-black/50 px-4 py-2 rounded-lg">Change Image</span>
+                    <div className="absolute inset-0 bg-slate-900/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-20 backdrop-blur-[4px]">
+                      <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mb-3 border border-white/30">
+                        <RotateCw className="text-white" />
+                      </div>
+                      <span className="text-white text-xs font-black uppercase tracking-widest">Change Image</span>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="w-16 h-16 bg-white/10 text-[#00d2ff] rounded-full flex items-center justify-center mb-4">
-                      <UploadCloud size={32} />
+                    <div className="w-20 h-20 bg-white text-primary rounded-2xl flex items-center justify-center mb-6 shadow-md border border-slate-100 group-hover:scale-110 transition-transform">
+                      <UploadCloud size={40} />
                     </div>
-                    <p className="text-white font-medium">Click or drag back image</p>
-                    <p className="text-white/50 text-sm mt-2">JPG, PNG up to 10MB</p>
+                    <p className="text-slate-900 font-black text-lg tracking-tight mb-2">Click or drag back image</p>
+                    <p className="text-slate-400 text-[10px] uppercase font-black tracking-widest">JPG, PNG, WEBP UP TO 10MB</p>
                   </>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-6">
             {(frontImage.autoCrop || backImage.autoCrop) && (
-              <div className="text-[#00d2ff] text-sm font-medium flex items-center gap-2 animate-pulse">
-                <Sparkles size={16} /> AI has detected your document edges. Press Start to review.
+              <div className="text-primary text-sm font-black flex items-center gap-3 animate-pulse uppercase tracking-wider bg-primary/5 px-6 py-2 rounded-full border border-primary/20">
+                <Sparkles size={18} className="text-amber-500" /> AI HAS DETECTED EDGES. PROCEED TO CROP.
               </div>
             )}
             <button 
               onClick={handleStartScanning}
               disabled={!frontImage.originalUrl || isDetectingFront || isDetectingBack}
-              className="px-8 py-4 btn-primary rounded-xl font-bold text-lg disabled:opacity-50 flex items-center gap-2"
+              className="px-10 py-5 btn-primary rounded-2xl font-[900] text-xl disabled:opacity-50 flex items-center gap-3 shadow-xl shadow-primary/20 hover:shadow-primary/40 leading-none"
             >
-              START SCANNING <CheckCircle2 />
+              START EDITING <ArrowRight />
             </button>
           </div>
         </div>
@@ -653,71 +728,98 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
       {step === 2 && (
         <div className="grid lg:grid-cols-12 gap-8">
           {/* Left Panel: Adjustments */}
-          <div className="lg:col-span-3 glass-panel p-6 h-fit">
-            <h3 className="font-bold text-white mb-6 flex items-center gap-2 border-b border-white/15 pb-4">
-              <Settings2 className="text-[#00d2ff]" /> Adjustments ({currentEditSide === 'front' ? 'Front' : 'Back'})
+          <div className="lg:col-span-3 glass-panel p-6 h-fit bg-white">
+            <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4 tracking-tight">
+              <Settings2 className="text-primary" /> Adjustments ({currentEditSide === 'front' ? 'Front' : 'Back'})
             </h3>
 
             <div className="space-y-6">
-              <div>
-                <div className="flex justify-between text-xs font-medium text-white/60 mb-2">
-                  <span>BRIGHTNESS</span>
-                  <span>{currentImgState.brightness}%</span>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
+                <div>
+                  <div className="flex justify-between text-[10px] font-black text-slate-400 mb-2 tracking-widest uppercase">
+                    <span>BRIGHTNESS</span>
+                    <span className="text-primary">{currentImgState.brightness}%</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="50" max="150" 
+                    value={currentImgState.brightness} 
+                    onChange={(e) => updateCurrentEdit({ brightness: parseInt(e.target.value) })}
+                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary" 
+                  />
                 </div>
-                <input 
-                  type="range" 
-                  min="50" max="150" 
-                  value={currentImgState.brightness} 
-                  onChange={(e) => updateCurrentEdit({ brightness: parseInt(e.target.value) })}
-                  className="w-full accent-[#00d2ff]" 
-                />
+  
+                <div>
+                  <div className="flex justify-between text-[10px] font-black text-slate-400 mb-2 tracking-widest uppercase">
+                    <span>CONTRAST</span>
+                    <span className="text-primary">{currentImgState.contrast}%</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="50" max="150" 
+                    value={currentImgState.contrast} 
+                    onChange={(e) => updateCurrentEdit({ contrast: parseInt(e.target.value) })}
+                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary" 
+                  />
+                </div>
+  
+                <div>
+                  <div className="flex justify-between text-[10px] font-black text-slate-400 mb-2 tracking-widest uppercase">
+                    <span>CLARITY</span>
+                    <span className="text-primary">{currentImgState.sharpness}%</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0" max="100" 
+                    value={currentImgState.sharpness} 
+                    onChange={(e) => updateCurrentEdit({ sharpness: parseInt(e.target.value) })}
+                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary" 
+                  />
+                </div>
               </div>
 
-              <div>
-                <div className="flex justify-between text-xs font-medium text-white/60 mb-2">
-                  <span>CONTRAST</span>
-                  <span>{currentImgState.contrast}%</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="50" max="150" 
-                  value={currentImgState.contrast} 
-                  onChange={(e) => updateCurrentEdit({ contrast: parseInt(e.target.value) })}
-                  className="w-full accent-[#00d2ff]" 
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs font-medium text-white/60 mb-2">
-                  <span>SHARPEN (Clarity)</span>
-                  <span>{currentImgState.sharpness}%</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="0" max="100" 
-                  value={currentImgState.sharpness} 
-                  onChange={(e) => updateCurrentEdit({ sharpness: parseInt(e.target.value) })}
-                  className="w-full accent-[#00d2ff]" 
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs font-medium text-white/60 mb-2">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div className="flex justify-between text-[10px] font-black text-slate-400 mb-3 tracking-widest uppercase">
                   <span>FINE ROTATE</span>
-                  <span>{currentImgState.rotation}°</span>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => updateCurrentEdit({ rotation: currentImgState.rotation - 1 })}
+                      className="w-5 h-5 flex items-center justify-center bg-white border border-slate-200 rounded hover:border-primary transition-colors"
+                    >
+                      -
+                    </button>
+                    <span className="text-primary w-8 text-center">{currentImgState.rotation}°</span>
+                    <button 
+                      onClick={() => updateCurrentEdit({ rotation: currentImgState.rotation + 1 })}
+                      className="w-5 h-5 flex items-center justify-center bg-white border border-slate-200 rounded hover:border-primary transition-colors"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
                 <input 
                   type="range" 
                   min="-180" max="180" 
                   value={currentImgState.rotation} 
                   onChange={(e) => updateCurrentEdit({ rotation: parseInt(e.target.value) })}
-                  className="w-full accent-[#00d2ff]" 
+                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary mb-4" 
                 />
+                <div className="grid grid-cols-4 gap-2">
+                  {[-45, -5, 5, 45].map(deg => (
+                    <button
+                      key={deg}
+                      onClick={() => updateCurrentEdit({ rotation: currentImgState.rotation + deg })}
+                      className="text-[9px] font-bold py-1 bg-white border border-slate-100 rounded-lg hover:border-primary transition-all text-slate-500 hover:text-primary"
+                    >
+                      {deg > 0 ? `+${deg}°` : `${deg}°`}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="pt-4 border-t border-white/15">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-medium text-white/60">SHOW SIDE BORDER</span>
+              <div className="pt-6 border-t border-slate-100 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Show Side Border</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input 
                       type="checkbox" 
@@ -728,63 +830,79 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
                       }} 
                       className="sr-only peer" 
                     />
-                    <div className="w-9 h-5 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#00d2ff]"></div>
+                    <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-medium text-white/60">LOCK ASPECT RATIO</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Lock Aspect Ratio</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" checked={lockAspect} onChange={(e) => setLockAspect(e.target.checked)} className="sr-only peer" />
-                    <div className="w-9 h-5 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#00d2ff]"></div>
+                    <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
                 
                 <button 
                   onClick={snapToEdges}
-                  className="w-full py-2 bg-[#00d2ff]/10 hover:bg-[#00d2ff]/20 text-[#00d2ff] rounded-lg font-medium flex items-center justify-center gap-2 transition-colors border border-[#00d2ff]/30 mb-3"
+                  className="w-full py-3 bg-primary/5 hover:bg-primary/10 text-primary rounded-xl font-black text-xs uppercase tracking-widest border border-primary/20 transition-all flex items-center justify-center gap-2 mb-3"
                 >
-                  <CropIcon size={18} /> Snap to Edges
+                  <CropIcon size={16} /> Snap to Edges
                 </button>
 
                 <button 
-                  onClick={() => updateCurrentEdit({ rotation: currentImgState.rotation + 90 })}
-                  className="w-full py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+                  onClick={() => {
+                    const newRotation = currentImgState.rotation + 90;
+                    if (currentEditSide === 'front') {
+                      setFrontImage(prev => ({ ...prev, rotation: newRotation }));
+                    } else {
+                      setBackImage(prev => ({ ...prev, rotation: newRotation }));
+                    }
+                    // Re-calculate snap with new rotation
+                    setTimeout(snapToEdges, 0); 
+                  }}
+                  className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                 >
-                  <RotateCw size={18} /> Rotate 90°
+                  <RotateCw size={16} /> Rotate & Snap
                 </button>
               </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-white/15 space-y-3">
+            <div className="mt-10 pt-8 border-t border-slate-100 space-y-3">
               <button 
                 onClick={() => updateCurrentEdit({ brightness: 100, contrast: 100, rotation: 0 })}
-                className="w-full py-3 bg-black/20 text-white rounded-lg font-medium hover:bg-black/40 transition-colors"
+                className="w-full py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 transition-colors"
               >
-                Reset
+                Reset All
               </button>
               <button 
                 onClick={handleConfirmEdit}
-                className="w-full py-3 btn-primary rounded-lg font-bold"
+                className="w-full py-4 btn-primary rounded-xl font-black text-sm uppercase tracking-wider shadow-lg shadow-primary/20"
               >
-                {currentEditSide === 'front' && backImage.originalUrl ? 'Confirm & Scan Back' : 'Confirm & Finish'}
+                {currentEditSide === 'front' && backImage.originalUrl ? 'Next: Scan Back' : 'Finish & Export'}
               </button>
             </div>
           </div>
 
           {/* Right Panel: Crop Area */}
-          <div className="lg:col-span-9 glass-panel p-4 flex flex-col items-center justify-center min-h-[500px] bg-black/40">
-            <div className="text-white/60 mb-4 flex items-center gap-2">
-              <CropIcon size={18} /> Drag corners to align card
+          <div className="lg:col-span-9 glass-panel p-8 flex flex-col items-center justify-center min-h-[600px] bg-slate-950 relative overflow-hidden group">
+            <div className="absolute top-8 left-8 z-20 flex flex-col items-start bg-slate-900/60 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10">
+              <h2 className="text-xl font-black text-white flex items-center gap-3 mb-1 uppercase tracking-tight">
+                <CropIcon className="text-primary" size={24} /> 
+                Crop {currentEditSide} Side
+              </h2>
+              <div className="text-primary font-black text-[10px] tracking-widest uppercase flex items-center gap-2">
+                <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse"></span>
+                Align document boundary
+              </div>
             </div>
             
-            <div className="max-w-full max-h-[60vh] overflow-auto">
+            <div className="max-w-full max-h-[65vh] overflow-auto mt-12">
               {currentImgState.originalUrl && (
                 <ReactCrop
                   crop={crop}
                   onChange={handleCropChange}
                   onComplete={(c) => setCompletedCrop(c)}
-                  aspect={lockAspect ? ID_CARD_ASPECT : undefined}
+                  aspect={getEffectiveAspect()}
                   className="max-w-full"
                   ruleOfThirds
                 >
@@ -813,68 +931,74 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
       {step === 3 && (
         <div className="grid lg:grid-cols-12 gap-8">
           {/* Left Panel: Options */}
-          <div className="lg:col-span-3 glass-panel p-6 h-fit">
-            <h3 className="font-bold text-white mb-6 border-b border-white/15 pb-4">Layout Options</h3>
+          <div className="lg:col-span-3 glass-panel p-8 h-fit bg-white border border-slate-200">
+            <h3 className="font-black text-slate-900 mb-8 border-b border-slate-100 pb-4 text-xs uppercase tracking-widest">Layout Configuration</h3>
             
-            <div className="grid grid-cols-2 gap-3 mb-8">
+            <div className="grid grid-cols-2 gap-4 mb-10">
               <button 
                 onClick={() => setLayout('vertical')}
-                className={`py-3 rounded-lg border flex flex-col items-center justify-center gap-2 transition-colors ${
-                  layout === 'vertical' ? 'bg-[#7b61ff]/20 border-[#7b61ff] text-white' : 'bg-black/20 border-white/10 text-white/60 hover:bg-white/5'
+                className={`py-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-3 transition-all ${
+                  layout === 'vertical' 
+                    ? 'bg-primary/5 border-primary text-primary shadow-lg shadow-primary/5' 
+                    : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100 hover:border-slate-200'
                 }`}
               >
-                <div className="w-4 h-6 border-2 border-current rounded-sm"></div>
-                <span className="text-xs font-bold">VERTICAL</span>
+                <div className="w-5 h-8 border-[2.5px] border-current rounded-md"></div>
+                <span className="text-[10px] font-black uppercase tracking-widest">Vertical</span>
               </button>
               <button 
                 onClick={() => setLayout('horizontal')}
-                className={`py-3 rounded-lg border flex flex-col items-center justify-center gap-2 transition-colors ${
-                  layout === 'horizontal' ? 'bg-[#7b61ff]/20 border-[#7b61ff] text-white' : 'bg-black/20 border-white/10 text-white/60 hover:bg-white/5'
+                className={`py-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-3 transition-all ${
+                  layout === 'horizontal' 
+                    ? 'bg-primary/5 border-primary text-primary shadow-lg shadow-primary/5' 
+                    : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100 hover:border-slate-200'
                 }`}
               >
-                <div className="w-6 h-4 border-2 border-current rounded-sm"></div>
-                <span className="text-xs font-bold">HORIZONTAL</span>
+                <div className="w-8 h-5 border-[2.5px] border-current rounded-md"></div>
+                <span className="text-[10px] font-black uppercase tracking-widest">Horizontal</span>
               </button>
             </div>
 
-            <h3 className="font-bold text-white mb-4 border-b border-white/15 pb-4">Card Size</h3>
-            <select 
-              value={cardSize} 
-              onChange={(e) => setCardSize(e.target.value as any)}
-              className="input-glass rounded p-2 w-full text-sm mb-8"
-            >
-              <option value="standard" className="text-slate-900">Standard (85x54mm)</option>
-              <option value="large" className="text-slate-900">Large (105x66mm)</option>
-              <option value="xlarge" className="text-slate-900">Extra Large (125x79mm)</option>
-            </select>
+            <h3 className="font-black text-slate-900 mb-4 border-b border-slate-100 pb-4 text-xs uppercase tracking-widest">Card Dimensions</h3>
+            <div className="relative mb-10">
+              <select 
+                value={cardSize} 
+                onChange={(e) => setCardSize(e.target.value as any)}
+                className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-3 text-sm font-bold appearance-none focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer"
+              >
+                <option value="standard">Standard ID (85x54mm)</option>
+                <option value="large">Service Size (105x66mm)</option>
+                <option value="xlarge">Large Print (125x79mm)</option>
+              </select>
+            </div>
 
-            <h3 className="font-bold text-white mb-4 border-b border-white/15 pb-4">Settings</h3>
-            <div className="flex items-center justify-between mb-8">
-              <span className="text-sm font-medium text-white/80">SHOW BORDERS</span>
+            <h3 className="font-black text-slate-900 mb-6 border-b border-slate-100 pb-4 text-xs uppercase tracking-widest">Global Settings</h3>
+            <div className="flex items-center justify-between mb-12">
+              <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Show Cut Borders</span>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" checked={showBorders} onChange={(e) => setShowBorders(e.target.checked)} className="sr-only peer" />
-                <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00d2ff]"></div>
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <button 
                 onClick={generatePDF}
                 disabled={isGenerating}
-                className="w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-bold flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm tracking-wide flex items-center justify-center gap-3 transition-all shadow-xl disabled:opacity-50"
               >
-                <Download size={18} /> DOWNLOAD PDF
+                <Download size={18} /> SAVE AS PDF
               </button>
               <button 
                 onClick={downloadJPG}
                 disabled={isGenerating}
-                className="w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-bold flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-4 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-2xl font-black text-sm tracking-wide flex items-center justify-center gap-3 transition-all border border-slate-200 disabled:opacity-50"
               >
-                <ImageIcon size={18} /> DOWNLOAD JPG
+                <ImageIcon size={18} /> SAVE AS JPG
               </button>
               <button 
                 onClick={handlePrint}
-                className="w-full py-3 btn-primary rounded-lg font-bold flex items-center justify-center gap-2"
+                className="w-full py-4 btn-primary rounded-2xl font-black text-sm tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
               >
                 <Printer size={18} /> PRINT NOW
               </button>
@@ -885,7 +1009,7 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
                   setFrontImage({ ...defaultImageState });
                   setBackImage({ ...defaultImageState });
                 }}
-                className="w-full py-3 mt-4 text-white/60 hover:text-white text-sm font-medium transition-colors"
+                className="w-full py-6 mt-6 text-slate-400 hover:text-slate-900 text-xs font-black uppercase tracking-widest transition-all block border-t border-slate-100"
               >
                 ↺ SCAN NEW DOCUMENT
               </button>
@@ -893,48 +1017,110 @@ export function DocumentScanner({ onNavigate }: DocumentScannerProps) {
           </div>
 
           {/* Right Panel: A4 Preview */}
-          <div className="lg:col-span-9 glass-panel bg-black/20 p-8 flex justify-center overflow-auto h-[800px]">
+          <div className="lg:col-span-9 glass-panel bg-slate-200/50 p-10 flex justify-center overflow-auto h-[850px] shadow-inner shadow-slate-900/5">
             {/* A4 Paper Container (210mm x 297mm) */}
             <div 
               ref={printRef}
               id="print-section"
-              className="bg-white relative print-container"
+              className="bg-white relative shadow-2xl transition-all"
               style={{ 
                 width: '210mm', 
                 minHeight: '297mm', 
                 padding: '20mm',
                 boxSizing: 'border-box',
-                boxShadow: 'none'
+                boxShadow: '0 40px 60px -15px rgba(0,0,0,0.15)'
               }}
             >
               <div className={`flex ${layout === 'vertical' ? 'flex-col items-center gap-8' : 'flex-row justify-center gap-4'} mt-10`}>
                 {frontImage.croppedUrl && (
-                  <img 
-                    src={frontImage.croppedUrl} 
-                    alt="Front" 
-                    className={`object-contain ${showBorders ? 'border border-gray-300 shadow-sm' : ''}`}
-                    style={{ 
-                      width: dims.width, 
-                      height: dims.height 
-                    }} 
-                  />
+                  <div className="relative group p-1">
+                    <img 
+                      src={frontImage.croppedUrl} 
+                      alt="Front" 
+                      className={`object-contain transition-transform duration-300 ${showBorders ? 'border border-gray-300 shadow-sm' : ''}`}
+                      style={{ 
+                        width: ( (frontImage.resultRotation % 180) === 0 ) ? dims.width : dims.height, 
+                        height: ( (frontImage.resultRotation % 180) === 0 ) ? dims.height : dims.width,
+                        transform: `rotate(${frontImage.resultRotation}deg)`
+                      }} 
+                    />
+                    <div className="absolute -top-4 -right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity print:hidden">
+                      <button 
+                        onClick={() => setFrontImage(p => ({...p, resultRotation: (p.resultRotation + 90) % 360}))}
+                        className="bg-white text-slate-900 p-2 rounded-full shadow-lg hover:bg-slate-100 border border-slate-200"
+                        title="Rotate Front"
+                      >
+                        <RotateCw size={16} />
+                      </button>
+                    </div>
+                  </div>
                 )}
                 {backImage.croppedUrl && (
-                  <img 
-                    src={backImage.croppedUrl} 
-                    alt="Back" 
-                    className={`object-contain ${showBorders ? 'border border-gray-300 shadow-sm' : ''}`}
-                    style={{ 
-                      width: dims.width, 
-                      height: dims.height 
-                    }} 
-                  />
+                  <div className="relative group p-1">
+                    <img 
+                      src={backImage.croppedUrl} 
+                      alt="Back" 
+                      className={`object-contain transition-transform duration-300 ${showBorders ? 'border border-gray-300 shadow-sm' : ''}`}
+                      style={{ 
+                        width: ( (backImage.resultRotation % 180) === 0 ) ? dims.width : dims.height, 
+                        height: ( (backImage.resultRotation % 180) === 0 ) ? dims.height : dims.width,
+                        transform: `rotate(${backImage.resultRotation}deg)`
+                      }} 
+                    />
+                    <div className="absolute -top-4 -right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity print:hidden">
+                      <button 
+                        onClick={() => setBackImage(p => ({...p, resultRotation: (p.resultRotation + 90) % 360}))}
+                        className="bg-white text-slate-900 p-2 rounded-full shadow-lg hover:bg-slate-100 border border-slate-200"
+                        title="Rotate Back"
+                      >
+                        <RotateCw size={16} />
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Guide Section */}
+      <section className="mt-32 max-w-7xl mx-auto px-4 pb-20 grid md:grid-cols-2 gap-10">
+         <div className="bg-slate-50 border border-slate-100 rounded-[2.5rem] p-10">
+            <h3 className="text-xl font-black text-slate-900 mb-6 uppercase tracking-tight flex items-center gap-3">
+              <Sparkles className="text-primary" /> How to use?
+            </h3>
+            <div className="space-y-6">
+              {[
+                { step: '01', title: 'Upload Both Sides', desc: 'Starting with Step 1, upload the front and back side of your document (Adhaar, PAN, Voter ID).' },
+                { step: '02', title: 'Edit & Process', desc: 'In Step 2, crop each side precisely and adjust brightness/rotation to ensure text is clear.' },
+                { step: '03', title: 'Preview Layout', desc: 'See your document automatically arranged for A4 printing in the final step.' },
+                { step: '04', title: 'Print or Save', desc: 'Click the PRINT NOW button to save as PDF or send directly to your local printer.' }
+              ].map(item => (
+                <div key={item.step} className="flex gap-4">
+                  <span className="text-primary font-black text-lg">{item.step}</span>
+                  <div>
+                    <h4 className="text-slate-900 font-bold text-sm mb-1">{item.title}</h4>
+                    <p className="text-slate-500 text-xs leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+         </div>
+
+         <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 flex flex-col justify-center text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Printer className="text-primary" size={32} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-4 uppercase tracking-tight">Professional Print Tool</h3>
+            <p className="text-slate-500 text-sm font-medium leading-relaxed max-w-sm mx-auto mb-8">
+              Perfectly scale and align identification documents for standard printing without wasting paper or ink.
+            </p>
+            <div className="flex items-center justify-center gap-2 py-3 px-6 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest w-fit mx-auto shadow-xl">
+              <CheckCircle2 size={16} className="text-primary" /> A4 Layout Optimized
+            </div>
+         </div>
+      </section>
     </div>
   );
 }

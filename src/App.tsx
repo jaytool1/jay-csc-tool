@@ -13,10 +13,11 @@ import { DocumentScanner } from './components/DocumentScanner';
 import { ImageTools } from './components/ImageTools';
 import { PdfTools } from './components/PdfTools';
 import { TextTools } from './components/TextTools';
+import { PhotoNameJoiner } from './components/PhotoNameJoiner';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { TermsOfService } from './components/TermsOfService';
 
-export type Page = 'home' | 'pan-resizer' | 'id-maker' | 'resume-maker' | 'signature-resizer' | 'whatsapp-print' | 'image-to-pdf' | 'image-resizer' | 'pdf-merge' | 'pdf-split' | 'pdf-rotate' | 'text-case' | 'word-counter' | 'password-gen' | 'password-strength' | 'privacy-policy' | 'terms-of-service';
+export type Page = 'home' | 'pan-resizer' | 'id-maker' | 'resume-maker' | 'signature-resizer' | 'whatsapp-print' | 'image-to-pdf' | 'image-resizer' | 'pdf-merge' | 'pdf-split' | 'pdf-rotate' | 'text-case' | 'word-counter' | 'password-gen' | 'password-strength' | 'photo-name-joiner' | 'privacy-policy' | 'terms-of-service';
 
 export default function App() {
   // Main application routing state
@@ -34,6 +35,8 @@ export default function App() {
         return <ResumeMaker onNavigate={setCurrentPage} />;
       case 'whatsapp-print':
         return <DocumentScanner onNavigate={setCurrentPage} />;
+      case 'photo-name-joiner':
+        return <PhotoNameJoiner onNavigate={setCurrentPage} />;
       case 'image-to-pdf':
         return <ImageTools onNavigate={setCurrentPage} initialTool="pdf" />;
       case 'image-resizer':

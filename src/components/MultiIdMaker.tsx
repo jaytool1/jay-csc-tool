@@ -21,7 +21,10 @@ import {
   AlertTriangle,
   Settings2,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  CheckCircle2,
+  Sparkles,
+  ShieldCheck
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -72,7 +75,7 @@ export function MultiIdMaker({ onNavigate }: MultiIdMakerProps) {
   const [activeModule, setActiveModule] = useState<IdModule>('school');
   const [selectedSchoolTemplate, setSelectedSchoolTemplate] = useState(1);
   const [selectedVisitorTemplate, setSelectedVisitorTemplate] = useState(1);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
@@ -178,29 +181,29 @@ export function MultiIdMaker({ onNavigate }: MultiIdMakerProps) {
           const elements = clonedDoc.getElementsByClassName('animate-pulse');
           Array.from(elements).forEach(el => (el as HTMLElement).classList.remove('animate-pulse'));
 
-          // 1. Sanitize all style tags to remove oklch definitions that crash the parser
+          // 1. Sanitize all style tags to remove oklch/oklab definitions that crash the parser
           const styleTags = clonedDoc.getElementsByTagName('style');
           for (let i = 0; i < styleTags.length; i++) {
-            styleTags[i].textContent = styleTags[i].textContent?.replace(/oklch\([^)]+\)/g, '#000000') || '';
+            styleTags[i].textContent = styleTags[i].textContent?.replace(/(oklch|oklab|lch|lab)\([^)]+\)/g, '#000000') || '';
           }
 
           const allElements = clonedDoc.getElementsByTagName('*');
           for (let i = 0; i < allElements.length; i++) {
             const el = allElements[i] as HTMLElement;
             const styleAttr = el.getAttribute('style');
-            if (styleAttr && styleAttr.includes('oklch')) {
-              el.setAttribute('style', styleAttr.replace(/oklch\([^)]+\)/g, '#000000'));
+            if (styleAttr && /(oklch|oklab|lch|lab)/.test(styleAttr)) {
+              el.setAttribute('style', styleAttr.replace(/(oklch|oklab|lch|lab)\([^)]+\)/g, '#000000'));
             }
             const style = window.getComputedStyle(el);
             ['backgroundColor', 'color', 'borderColor', 'outlineColor', 'boxShadow'].forEach(prop => {
               const val = (style as any)[prop];
-              if (val && typeof val === 'string' && val.includes('oklch')) {
+              if (val && typeof val === 'string' && /(oklch|oklab|lch|lab)/.test(val)) {
                 if (val.includes('0.9')) el.style.setProperty(prop, '#f8fafc', 'important');
                 else el.style.setProperty(prop, '#000000', 'important');
               }
             });
 
-            if (style.boxShadow && style.boxShadow.includes('oklch')) {
+            if (style.boxShadow && /(oklch|oklab|lch|lab)/.test(style.boxShadow)) {
               el.style.boxShadow = 'none';
             }
           }
@@ -306,25 +309,25 @@ export function MultiIdMaker({ onNavigate }: MultiIdMakerProps) {
   };
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-[#0a0a0a] text-white' : 'bg-gray-50 text-gray-900'} transition-colors duration-300`}>
-      <div className="max-w-[1600px] mx-auto flex flex-col h-screen">
+    <div className={`min-h-screen ${isDarkMode ? 'bg-[#0a0a0a] text-white' : 'bg-white text-slate-900'} transition-colors duration-300`}>
+      <div className="max-w-[1600px] mx-auto flex flex-col min-h-screen">
         
         {/* Top Header / Module Toggle */}
-        <header className={`px-6 py-4 border-b ${isDarkMode ? 'border-white/10 bg-black/40' : 'border-gray-200 bg-white'} backdrop-blur-md sticky top-0 z-30 flex items-center justify-between`}>
+        <header className={`px-6 py-4 border-b ${isDarkMode ? 'border-white/10 bg-black/40' : 'border-slate-200 bg-white/80'} backdrop-blur-md sticky top-0 z-30 flex items-center justify-between`}>
           <div className="flex items-center gap-6">
             <h1 className="text-xl font-black tracking-tighter flex items-center gap-2">
-              <IdCard className="text-[#7b61ff]" /> ADVANCED ID <span className="text-white/40">GEN</span>
+              <IdCard className="text-primary" /> ADVANCED ID <span className={isDarkMode ? 'text-white/40' : 'text-slate-300'}>GEN</span>
             </h1>
-            <nav className="flex bg-white/5 p-1 rounded-xl border border-white/5 overflow-hidden">
+            <nav className={`flex ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-slate-100 border-slate-200'} p-1 rounded-xl border overflow-hidden`}>
               <button 
                 onClick={() => setActiveModule('school')}
-                className={`px-5 py-2 rounded-lg text-xs font-bold uppercase transition-all flex items-center gap-2 ${activeModule === 'school' ? 'bg-[#7b61ff] text-white shadow-lg' : 'hover:bg-white/5 text-white/40'}`}
+                className={`px-5 py-2 rounded-lg text-xs font-bold uppercase transition-all flex items-center gap-2 ${activeModule === 'school' ? 'bg-primary text-white shadow-lg' : isDarkMode ? 'hover:bg-white/5 text-white/40' : 'hover:bg-slate-200 text-slate-500'}`}
               >
                 <School size={14} /> School
               </button>
               <button 
                 onClick={() => setActiveModule('visitor')}
-                className={`px-5 py-2 rounded-lg text-xs font-bold uppercase transition-all flex items-center gap-2 ${activeModule === 'visitor' ? 'bg-emerald-500 text-white shadow-lg' : 'hover:bg-white/5 text-white/40'}`}
+                className={`px-5 py-2 rounded-lg text-xs font-bold uppercase transition-all flex items-center gap-2 ${activeModule === 'visitor' ? 'bg-emerald-500 text-white shadow-lg' : isDarkMode ? 'hover:bg-white/5 text-white/40' : 'hover:bg-slate-200 text-slate-500'}`}
               >
                 <UserCheck size={14} /> Visitor
               </button>
@@ -332,17 +335,17 @@ export function MultiIdMaker({ onNavigate }: MultiIdMakerProps) {
           </div>
 
           <div className="flex items-center gap-4">
-            <button onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')} className="p-2 hover:bg-white/5 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold">
+            <button onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')} className={`p-2 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-slate-100'}`}>
               <Languages size={18} /> {language === 'en' ? 'ENG' : 'HIN'}
             </button>
-            <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+            <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-2 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-slate-100'}`}>
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <div className="h-8 w-[1px] bg-white/10 mx-2"></div>
-            <button onClick={() => downloadCard('png')} disabled={isGenerating} className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold flex items-center gap-2">
+            <div className={`h-8 w-[1px] ${isDarkMode ? 'bg-white/10' : 'bg-slate-200'} mx-2`}></div>
+            <button onClick={() => downloadCard('png')} disabled={isGenerating} className={`px-4 py-2 border rounded-lg text-xs font-bold flex items-center gap-2 ${isDarkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
               <Download size={14} /> PNG
             </button>
-            <button onClick={() => downloadCard('pdf')} disabled={isGenerating} className="px-6 py-2 btn-primary rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg shadow-[#7b61ff]/20">
+            <button onClick={() => downloadCard('pdf')} disabled={isGenerating} className="px-6 py-2 btn-primary rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg shadow-primary/20">
               {isGenerating ? 'GEN...' : <><Printer size={14} /> PDF</>}
             </button>
           </div>
@@ -350,9 +353,9 @@ export function MultiIdMaker({ onNavigate }: MultiIdMakerProps) {
 
         <div className="flex-1 flex overflow-hidden">
           {/* Left Sidebar: Form Fields */}
-          <aside className={`w-[400px] flex-shrink-0 border-r ${isDarkMode ? 'border-white/10 bg-black/20' : 'border-gray-200 bg-gray-50'} overflow-y-auto p-6 scrollbar-hide`}>
+          <aside className={`w-[400px] flex-shrink-0 border-r ${isDarkMode ? 'border-white/10 bg-black/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'} overflow-y-auto p-6 scrollbar-hide`}>
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-sm font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
+              <h2 className={`text-sm font-black uppercase tracking-widest flex items-center gap-2 ${isDarkMode ? 'text-white/40' : 'text-slate-400'}`}>
                 <Settings2 size={16} /> Configuration
               </h2>
               <button 
@@ -361,7 +364,7 @@ export function MultiIdMaker({ onNavigate }: MultiIdMakerProps) {
                   if(activeModule === 'school') setSchoolData(p => ({ ...p, idNumber: newId }));
                   else setVisitorData(p => ({ ...p, idNumber: newId }));
                 }}
-                className="text-[10px] font-black uppercase bg-white/5 px-2 py-1 rounded text-[#7b61ff]"
+                className={`text-[10px] font-black uppercase px-2 py-1 rounded ${isDarkMode ? 'bg-white/5 text-primary' : 'bg-primary/10 text-primary'}`}
               >
                 Auto-Gen ID
               </button>
@@ -369,7 +372,7 @@ export function MultiIdMaker({ onNavigate }: MultiIdMakerProps) {
 
             {/* Template Selection */}
             <section className="mb-8">
-              <h3 className="text-[10px] font-black uppercase text-white/30 tracking-widest mb-4 flex items-center gap-2">
+              <h3 className={`text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2 ${isDarkMode ? 'text-white/30' : 'text-slate-400'}`}>
                 <LayoutIcon size={14} /> Premium Templates
               </h3>
               <div className="grid grid-cols-5 gap-2">
@@ -379,8 +382,8 @@ export function MultiIdMaker({ onNavigate }: MultiIdMakerProps) {
                     onClick={() => activeModule === 'school' ? setSelectedSchoolTemplate(t) : setSelectedVisitorTemplate(t)}
                     className={`aspect-square rounded-lg border-2 transition-all flex items-center justify-center text-xs font-black ${
                       (activeModule === 'school' ? selectedSchoolTemplate : selectedVisitorTemplate) === t
-                        ? 'border-[#7b61ff] bg-[#7b61ff]/10 text-white shadow-lg'
-                        : 'border-white/5 bg-white/5 text-white/20 hover:border-white/20'
+                        ? 'border-primary bg-primary/10 text-primary shadow-lg'
+                        : isDarkMode ? 'border-white/5 bg-white/5 text-white/20 hover:border-white/20' : 'border-slate-200 bg-white text-slate-300 hover:border-slate-400'
                     }`}
                   >
                     T{t}
@@ -393,36 +396,47 @@ export function MultiIdMaker({ onNavigate }: MultiIdMakerProps) {
               {error && (
                 <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3">
                   <AlertTriangle size={16} className="text-red-500" />
-                  <p className="text-[10px] font-bold text-red-200 uppercase">{error}</p>
+                  <p className="text-[10px] font-bold text-red-600 uppercase">{error}</p>
                 </div>
               )}
 
-              <div className="space-y-6">
+            <div className="space-y-6">
+              {/* Photo Upload - Moved to Top for prominence */}
+              <div className={`pb-6 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'} space-y-4`}>
+                <UploadBox 
+                  label="User Photo" 
+                  icon={<Camera size={16} />} 
+                  onUpload={(e) => handleImageUpload(e, 'photoUrl', activeModule)} 
+                  previewUrl={activeModule === 'school' ? schoolData.photoUrl : visitorData.photoUrl} 
+                  isDarkMode={isDarkMode}
+                />
+              </div>
+
               {activeModule === 'school' && (
                 <>
                   <div className="space-y-4">
-                    <FieldGroup label="School Name">
-                      <input name="schoolName" value={schoolData.schoolName} onChange={(e) => handleInputChange(e, 'school')} className="w-full input-glass" />
+                    <FieldGroup label="School Name" isDarkMode={isDarkMode}>
+                      <input name="schoolName" value={schoolData.schoolName} onChange={(e) => handleInputChange(e, 'school')} className={`w-full ${isDarkMode ? 'input-glass text-white' : 'bg-white border-slate-200 focus:border-primary text-slate-900'} rounded-xl p-3 border text-sm font-medium outline-none transition-all`} />
                     </FieldGroup>
-                    <FieldGroup label="Student Name">
-                      <input name="studentName" value={schoolData.studentName} onChange={(e) => handleInputChange(e, 'school')} className="w-full input-glass" />
+                    <FieldGroup label="Student Name" isDarkMode={isDarkMode}>
+                      <input name="studentName" value={schoolData.studentName} onChange={(e) => handleInputChange(e, 'school')} className={`w-full ${isDarkMode ? 'input-glass text-white' : 'bg-white border-slate-200 focus:border-primary text-slate-900'} rounded-xl p-3 border text-sm font-medium outline-none transition-all`} />
                     </FieldGroup>
                     <div className="grid grid-cols-2 gap-4">
-                      <FieldGroup label="Class/Section">
-                        <input name="classSec" value={schoolData.classSec} onChange={(e) => handleInputChange(e, 'school')} className="w-full input-glass" />
+                      <FieldGroup label="Class/Section" isDarkMode={isDarkMode}>
+                        <input name="classSec" value={schoolData.classSec} onChange={(e) => handleInputChange(e, 'school')} className={`w-full ${isDarkMode ? 'input-glass text-white' : 'bg-white border-slate-200 focus:border-primary text-slate-900'} rounded-xl p-3 border text-sm font-medium outline-none transition-all`} />
                       </FieldGroup>
-                      <FieldGroup label="Roll No">
-                        <input name="rollNo" value={schoolData.rollNo} onChange={(e) => handleInputChange(e, 'school')} className="w-full input-glass" />
+                      <FieldGroup label="Roll No" isDarkMode={isDarkMode}>
+                        <input name="rollNo" value={schoolData.rollNo} onChange={(e) => handleInputChange(e, 'school')} className={`w-full ${isDarkMode ? 'input-glass text-white' : 'bg-white border-slate-200 focus:border-primary text-slate-900'} rounded-xl p-3 border text-sm font-medium outline-none transition-all`} />
                       </FieldGroup>
                     </div>
-                    <FieldGroup label="Father's Name">
-                      <input name="fatherName" value={schoolData.fatherName} onChange={(e) => handleInputChange(e, 'school')} className="w-full input-glass" />
+                    <FieldGroup label="Father's Name" isDarkMode={isDarkMode}>
+                      <input name="fatherName" value={schoolData.fatherName} onChange={(e) => handleInputChange(e, 'school')} className={`w-full ${isDarkMode ? 'input-glass text-white' : 'bg-white border-slate-200 focus:border-primary text-slate-900'} rounded-xl p-3 border text-sm font-medium outline-none transition-all`} />
                     </FieldGroup>
-                    <FieldGroup label="Valid Till">
-                      <input name="validTill" value={schoolData.validTill} onChange={(e) => handleInputChange(e, 'school')} className="w-full input-glass" />
+                    <FieldGroup label="Valid Till" isDarkMode={isDarkMode}>
+                      <input name="validTill" value={schoolData.validTill} onChange={(e) => handleInputChange(e, 'school')} className={`w-full ${isDarkMode ? 'input-glass text-white' : 'bg-white border-slate-200 focus:border-primary text-slate-900'} rounded-xl p-3 border text-sm font-medium outline-none transition-all`} />
                     </FieldGroup>
-                    <FieldGroup label="Address">
-                      <textarea name="address" value={schoolData.address} onChange={(e) => handleInputChange(e, 'school')} className="w-full input-glass h-20" />
+                    <FieldGroup label="Address" isDarkMode={isDarkMode}>
+                      <textarea name="address" value={schoolData.address} onChange={(e) => handleInputChange(e, 'school')} className={`w-full ${isDarkMode ? 'input-glass text-white' : 'bg-white border-slate-200 focus:border-primary text-slate-900'} rounded-xl p-3 border text-sm font-medium outline-none transition-all h-20`} />
                     </FieldGroup>
                   </div>
                 </>
@@ -431,52 +445,63 @@ export function MultiIdMaker({ onNavigate }: MultiIdMakerProps) {
               {activeModule === 'visitor' && (
                 <>
                   <div className="space-y-4">
-                    <FieldGroup label="Visitor Name">
-                      <input name="visitorName" value={visitorData.visitorName} onChange={(e) => handleInputChange(e, 'visitor')} className="w-full input-glass" />
+                    <FieldGroup label="Visitor Name" isDarkMode={isDarkMode}>
+                      <input name="visitorName" value={visitorData.visitorName} onChange={(e) => handleInputChange(e, 'visitor')} className={`w-full ${isDarkMode ? 'input-glass text-white' : 'bg-white border-slate-200 focus:border-primary text-slate-900'} rounded-xl p-3 border text-sm font-medium outline-none transition-all`} />
                     </FieldGroup>
-                    <FieldGroup label="Company Representing">
-                      <input name="companyName" value={visitorData.companyName} onChange={(e) => handleInputChange(e, 'visitor')} className="w-full input-glass" />
+                    <FieldGroup label="Company Representing" isDarkMode={isDarkMode}>
+                      <input name="companyName" value={visitorData.companyName} onChange={(e) => handleInputChange(e, 'visitor')} className={`w-full ${isDarkMode ? 'input-glass text-white' : 'bg-white border-slate-200 focus:border-primary text-slate-900'} rounded-xl p-3 border text-sm font-medium outline-none transition-all`} />
                     </FieldGroup>
-                    <FieldGroup label="Purpose of Visit">
-                      <input name="purpose" value={visitorData.purpose} onChange={(e) => handleInputChange(e, 'visitor')} className="w-full input-glass" />
+                    <FieldGroup label="Purpose of Visit" isDarkMode={isDarkMode}>
+                      <input name="purpose" value={visitorData.purpose} onChange={(e) => handleInputChange(e, 'visitor')} className={`w-full ${isDarkMode ? 'input-glass text-white' : 'bg-white border-slate-200 focus:border-primary text-slate-900'} rounded-xl p-3 border text-sm font-medium outline-none transition-all`} />
                     </FieldGroup>
-                    <FieldGroup label="Whom to Meet?">
-                      <input name="personToMeet" value={visitorData.personToMeet} onChange={(e) => handleInputChange(e, 'visitor')} className="w-full input-glass" />
+                    <FieldGroup label="Whom to Meet?" isDarkMode={isDarkMode}>
+                      <input name="personToMeet" value={visitorData.personToMeet} onChange={(e) => handleInputChange(e, 'visitor')} className={`w-full ${isDarkMode ? 'input-glass text-white' : 'bg-white border-slate-200 focus:border-primary text-slate-900'} rounded-xl p-3 border text-sm font-medium outline-none transition-all`} />
                     </FieldGroup>
                     <div className="grid grid-cols-2 gap-4">
-                      <FieldGroup label="Entry Time">
-                        <input name="entryDateTime" value={visitorData.entryDateTime} onChange={(e) => handleInputChange(e, 'visitor')} className="w-full input-glass text-[10px]" />
+                      <FieldGroup label="Entry Time" isDarkMode={isDarkMode}>
+                        <input name="entryDateTime" value={visitorData.entryDateTime} onChange={(e) => handleInputChange(e, 'visitor')} className={`w-full ${isDarkMode ? 'input-glass text-white' : 'bg-white border-slate-200 focus:border-primary text-slate-900'} rounded-xl p-3 border text-sm font-medium outline-none transition-all text-xs`} />
                       </FieldGroup>
-                      <FieldGroup label="Expected Exit">
-                        <input name="exitTime" value={visitorData.exitTime} onChange={(e) => handleInputChange(e, 'visitor')} className="w-full input-glass" />
+                      <FieldGroup label="Expected Exit" isDarkMode={isDarkMode}>
+                        <input name="exitTime" value={visitorData.exitTime} onChange={(e) => handleInputChange(e, 'visitor')} className={`w-full ${isDarkMode ? 'input-glass text-white' : 'bg-white border-slate-200 focus:border-primary text-slate-900'} rounded-xl p-3 border text-sm font-medium outline-none transition-all`} />
                       </FieldGroup>
                     </div>
                   </div>
                 </>
               )}
 
-              {/* Shared Uploads */}
-              <div className="pt-6 border-t border-white/10 space-y-4">
-                <UploadBox label="Photo" icon={<Camera size={16} />} onUpload={(e) => handleImageUpload(e, 'photoUrl', activeModule)} hasImage={!!(activeModule === 'school' ? schoolData.photoUrl : visitorData.photoUrl)} />
-                <UploadBox label="Signature" icon={<SignIcon size={16} />} onUpload={(e) => handleImageUpload(e, 'signUrl', activeModule)} hasImage={!!(activeModule === 'school' ? schoolData.signUrl : visitorData.signUrl)} />
+              {/* Remaining Uploads */}
+              <div className={`pt-6 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-200'} space-y-4`}>
+                <UploadBox 
+                  label="Signature" 
+                  icon={<SignIcon size={16} />} 
+                  onUpload={(e) => handleImageUpload(e, 'signUrl', activeModule)} 
+                  previewUrl={activeModule === 'school' ? schoolData.signUrl : visitorData.signUrl} 
+                  isDarkMode={isDarkMode}
+                />
                 {activeModule === 'school' && (
-                  <UploadBox label="School Logo" icon={<School size={16} />} onUpload={(e) => handleImageUpload(e, 'logoUrl', activeModule)} hasImage={!!schoolData.logoUrl} />
+                  <UploadBox 
+                    label="School Logo" 
+                    icon={<School size={16} />} 
+                    onUpload={(e) => handleImageUpload(e, 'logoUrl', activeModule)} 
+                    previewUrl={schoolData.logoUrl} 
+                    isDarkMode={isDarkMode}
+                  />
                 )}
               </div>
             </div>
           </aside>
 
           {/* Center Area: Preview Canvas */}
-          <main className="flex-1 p-12 flex flex-col items-center justify-center relative overflow-auto scrollbar-hide">
-            <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-4 text-[10px] font-bold text-white/40 uppercase tracking-[4px]">
-              <div className="w-12 h-[1px] bg-white/10"></div>
+          <main className={`flex-1 p-12 flex flex-col items-center justify-center relative overflow-auto scrollbar-hide ${isDarkMode ? '' : 'bg-slate-100'}`}>
+            <div className={`absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-4 text-[10px] font-bold uppercase tracking-[4px] ${isDarkMode ? 'text-white/40' : 'text-slate-400'}`}>
+              <div className={`w-12 h-[1px] ${isDarkMode ? 'bg-white/10' : 'bg-slate-300'}`}></div>
               Live Identity Preview
-              <div className="w-12 h-[1px] bg-white/10"></div>
+              <div className={`w-12 h-[1px] ${isDarkMode ? 'bg-white/10' : 'bg-slate-300'}`}></div>
             </div>
 
             {/* The Actual ID Card Render Container */}
             <div 
-              className={`shadow-[0_40px_100px_rgba(0,0,0,0.5)] transition-all duration-500 hover:scale-[1.02] bg-white`}
+              className={`shadow-[0_40px_100px_rgba(0,0,0,0.1)] transition-all duration-500 hover:scale-[1.02] bg-white`}
               style={activeModule === 'visitor' ? { width: '320px', height: '510px' } : { width: '510px', height: '320px' }}
             >
               <div 
@@ -1139,31 +1164,91 @@ export function MultiIdMaker({ onNavigate }: MultiIdMakerProps) {
             <span>AUTOSAVE ON</span>
           </div>
         </footer>
+
+        {/* Guide Section */}
+        <section className={`px-6 py-20 grid md:grid-cols-2 gap-10 ${isDarkMode ? 'bg-[#111]' : 'bg-slate-50'}`}>
+           <div className={`${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-slate-200'} border rounded-[2.5rem] p-10`}>
+              <h3 className={`text-xl font-black mb-6 uppercase tracking-tight flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                <Sparkles className="text-primary" /> How to use?
+              </h3>
+              <div className="space-y-6">
+                {[
+                  { step: '01', title: 'Select Module', desc: 'Choose between School ID or Visitor Pass module from the top navigation.' },
+                  { step: '02', title: 'Enter Details', desc: 'Fill in the student or visitor information in the configuration panel on the left.' },
+                  { step: '03', title: 'Pick Template', desc: 'Select from our premium design templates (T1-T5) to instantly change the look.' },
+                  { step: '04', title: 'Export PDF', desc: 'Click the PDF button to download a high-quality, print-ready document.' }
+                ].map(item => (
+                  <div key={item.step} className="flex gap-4">
+                    <span className="text-primary font-black text-lg">{item.step}</span>
+                    <div>
+                      <h4 className={`font-bold text-sm mb-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{item.title}</h4>
+                      <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-white/40' : 'text-slate-500'}`}>{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+           </div>
+
+           <div className={`${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-slate-200'} border rounded-[2.5rem] p-10 flex flex-col justify-center text-center`}>
+              <div className={`w-16 h-16 ${isDarkMode ? 'bg-primary/20' : 'bg-primary/10'} rounded-2xl flex items-center justify-center mx-auto mb-6`}>
+                <ShieldCheck className="text-primary" size={32} />
+              </div>
+              <h3 className={`text-xl font-black mb-4 uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Enterprise Standard</h3>
+              <p className={`text-sm font-medium leading-relaxed max-w-sm mx-auto mb-8 ${isDarkMode ? 'text-white/40' : 'text-slate-500'}`}>
+                Generate high-security ID cards that meet modern academic and professional standards for any organization.
+              </p>
+              <div className={`flex items-center justify-center gap-2 py-3 px-6 rounded-2xl text-xs font-black uppercase tracking-widest w-fit mx-auto shadow-xl ${isDarkMode ? 'bg-white text-black' : 'bg-slate-900 text-white'}`}>
+                <Printer size={16} className="text-primary" /> Multi-Print Ready
+              </div>
+           </div>
+        </section>
       </div>
     </div>
   );
 }
 
 // Sub-components
-function FieldGroup({ label, children }: { label: string, children: React.ReactNode }) {
+function FieldGroup({ label, children, isDarkMode }: { label: string, children: React.ReactNode, isDarkMode?: boolean }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-1 leading-none">{label}</label>
+      <label className={`block text-[10px] font-black uppercase tracking-widest ml-1 leading-none ${isDarkMode ? 'text-white/40' : 'text-slate-400'}`}>{label}</label>
       {children}
     </div>
   );
 }
 
-function UploadBox({ label, icon, onUpload, hasImage }: { label: string, icon: React.ReactNode, onUpload: (e: any) => void, hasImage: boolean }) {
+function UploadBox({ label, icon, onUpload, previewUrl, isDarkMode }: { label: string, icon: React.ReactNode, onUpload: (e: any) => void, previewUrl: string | null, isDarkMode?: boolean }) {
+  const hasImage = !!previewUrl;
   return (
     <div className="space-y-2">
-      <label className="block text-[10px] font-black uppercase text-white/40 ml-1 leading-none">{label}</label>
-      <div className={`relative border-2 border-dashed rounded-xl p-3 flex items-center justify-center gap-3 transition-all cursor-pointer ${hasImage ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10 hover:border-white/20 bg-white/5'}`}>
-        <input type="file" accept="image/*" onChange={onUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-        <div className={hasImage ? 'text-emerald-500' : 'text-white/40'}>{icon}</div>
-        <span className={`text-[10px] font-bold uppercase ${hasImage ? 'text-emerald-200' : 'text-white/60'}`}>
-          {hasImage ? 'Change Image' : 'Click to Upload'}
-        </span>
+      <label className={`block text-[10px] font-black uppercase ml-1 leading-none ${isDarkMode ? 'text-white/40' : 'text-slate-400'}`}>{label}</label>
+      <div className={`relative border-2 border-dashed rounded-xl p-2 flex items-center gap-3 transition-all cursor-pointer overflow-hidden ${hasImage ? (isDarkMode ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-emerald-500 bg-emerald-50/50') : (isDarkMode ? 'border-white/10 hover:border-white/20 bg-white/5' : 'border-slate-200 hover:border-slate-300 bg-white')}`}>
+        <input type="file" accept="image/*" onChange={onUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" />
+        
+        {hasImage ? (
+          <div className="w-10 h-10 rounded-lg overflow-hidden bg-black shrink-0 relative z-10 border border-emerald-500/30">
+            <img src={previewUrl!} alt="Preview" className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 z-10 ${isDarkMode ? 'bg-white/5 text-white/20' : 'bg-slate-50 text-slate-300'}`}>
+            {icon}
+          </div>
+        )}
+
+        <div className="flex-1 min-w-0 z-10">
+          <p className={`text-[10px] font-black uppercase truncate ${hasImage ? 'text-emerald-500' : (isDarkMode ? 'text-white/60' : 'text-slate-600')}`}>
+            {hasImage ? 'Image Loaded' : 'Click to Upload'}
+          </p>
+          <p className={`text-[8px] font-bold uppercase truncate ${isDarkMode ? 'text-white/30' : 'text-slate-400'}`}>
+            {hasImage ? 'Click to change' : `Set ${label}`}
+          </p>
+        </div>
+
+        {hasImage && (
+          <div className="absolute right-3 text-emerald-500 z-10">
+            <CheckCircle2 size={14} />
+          </div>
+        )}
       </div>
     </div>
   );

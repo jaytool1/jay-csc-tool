@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Page } from '../App';
-import { Printer, Upload, Download, Plus, Layout as LayoutIcon, CreditCard as IdCard } from 'lucide-react';
+import { Printer, Upload, Download, Plus, Layout as LayoutIcon, CreditCard as IdCard, Camera, Signature as SignIcon, Sparkles, CheckCircle2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -81,29 +81,29 @@ export function IdCardMaker({ onNavigate }: IdCardMakerProps) {
         width: cardRef.current.offsetWidth,
         height: cardRef.current.offsetHeight,
         onclone: (clonedDoc) => {
-          // 1. Sanitize all style tags to remove oklch definitions that crash the parser
+          // 1. Sanitize all style tags to remove oklch/oklab definitions that crash the parser
           const styleTags = clonedDoc.getElementsByTagName('style');
           for (let i = 0; i < styleTags.length; i++) {
-            styleTags[i].textContent = styleTags[i].textContent?.replace(/oklch\([^)]+\)/g, '#000000') || '';
+            styleTags[i].textContent = styleTags[i].textContent?.replace(/(oklch|oklab|lch|lab)\([^)]+\)/g, '#000000') || '';
           }
 
           const allElements = clonedDoc.getElementsByTagName('*');
           for (let i = 0; i < allElements.length; i++) {
             const el = allElements[i] as HTMLElement;
             const styleAttr = el.getAttribute('style');
-            if (styleAttr && styleAttr.includes('oklch')) {
-              el.setAttribute('style', styleAttr.replace(/oklch\([^)]+\)/g, '#000000'));
+            if (styleAttr && /(oklch|oklab|lch|lab)/.test(styleAttr)) {
+              el.setAttribute('style', styleAttr.replace(/(oklch|oklab|lch|lab)\([^)]+\)/g, '#000000'));
             }
             const style = window.getComputedStyle(el);
             ['backgroundColor', 'color', 'borderColor', 'outlineColor', 'boxShadow'].forEach(prop => {
               const val = (style as any)[prop];
-              if (val && typeof val === 'string' && val.includes('oklch')) {
+              if (val && typeof val === 'string' && /(oklch|oklab|lch|lab)/.test(val)) {
                 if (val.includes('0.9')) el.style.setProperty(prop, '#f8fafc', 'important');
                 else el.style.setProperty(prop, '#000000', 'important');
               }
             });
 
-            if (style.boxShadow && style.boxShadow.includes('oklch')) {
+            if (style.boxShadow && /(oklch|oklab|lch|lab)/.test(style.boxShadow)) {
               el.style.boxShadow = 'none';
             }
           }
@@ -211,21 +211,53 @@ export function IdCardMaker({ onNavigate }: IdCardMakerProps) {
             {/* Image Uploads */}
             <div className="pt-2 border-t border-white/15 mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-white/60 mb-2">Student Photo</label>
-                <div className="relative border-2 border-dashed border-white/15 bg-black/10 rounded-lg p-2 text-center hover:bg-white/5 cursor-pointer transition-colors">
-                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'photoUrl')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                  <div className="flex items-center justify-center gap-2 text-xs text-white/60 font-medium">
-                    <Upload size={14} /> {data.photoUrl ? 'Change Photo' : 'Upload Photo'}
+                <label className="block text-xs font-medium text-white/60 mb-2 uppercase tracking-widest">Student Photo</label>
+                <div className={`relative border-2 border-dashed rounded-xl p-3 flex items-center gap-3 transition-all cursor-pointer overflow-hidden ${data.photoUrl ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10 hover:border-white/20 bg-black/10'}`}>
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'photoUrl')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" />
+                  
+                  {data.photoUrl ? (
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-white shrink-0 relative z-10 border border-emerald-500/30">
+                      <img src={data.photoUrl} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center text-white/20 shrink-0 z-10">
+                      <Camera size={20} />
+                    </div>
+                  )}
+
+                  <div className="flex-1 min-w-0 z-10">
+                    <p className={`text-[10px] font-black uppercase truncate ${data.photoUrl ? 'text-emerald-400' : 'text-white/60'}`}>
+                      {data.photoUrl ? 'Photo Selected' : 'Upload Photo'}
+                    </p>
+                    <p className="text-[9px] font-bold text-white/30 uppercase truncate">
+                      {data.photoUrl ? 'Click to change' : 'Portrait recommended'}
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-white/60 mb-2">Signature Image</label>
-                <div className="relative border-2 border-dashed border-white/15 bg-black/10 rounded-lg p-2 text-center hover:bg-white/5 cursor-pointer transition-colors">
-                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'signUrl')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                  <div className="flex items-center justify-center gap-2 text-xs text-white/60 font-medium">
-                    <Upload size={14} /> {data.signUrl ? 'Change Signature' : 'Upload Signature'}
+                <label className="block text-xs font-medium text-white/60 mb-2 uppercase tracking-widest">Signature Image</label>
+                <div className={`relative border-2 border-dashed rounded-xl p-3 flex items-center gap-3 transition-all cursor-pointer overflow-hidden ${data.signUrl ? 'border-[#00d2ff]/50 bg-[#00d2ff]/5' : 'border-white/10 hover:border-white/20 bg-black/10'}`}>
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'signUrl')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" />
+                  
+                  {data.signUrl ? (
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-white shrink-0 relative z-10 border border-[#00d2ff]/30 p-1">
+                      <img src={data.signUrl} alt="Preview" className="w-full h-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center text-white/20 shrink-0 z-10">
+                      <SignIcon size={20} />
+                    </div>
+                  )}
+
+                  <div className="flex-1 min-w-0 z-10">
+                    <p className={`text-[10px] font-black uppercase truncate ${data.signUrl ? 'text-[#00d2ff]' : 'text-white/60'}`}>
+                      {data.signUrl ? 'Signature Selected' : 'Upload Signature'}
+                    </p>
+                    <p className="text-[9px] font-bold text-white/30 uppercase truncate">
+                      {data.signUrl ? 'Click to change' : 'Clear background preferred'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -539,29 +571,43 @@ export function IdCardMaker({ onNavigate }: IdCardMakerProps) {
         </div>
       </div>
       
-      {/* Instructions */}
-      <div className="mt-12 glass-panel p-6">
-        <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-          <LayoutIcon className="text-[#00d2ff]" /> How to Use ID Card Maker
-        </h3>
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="bg-black/20 p-4 rounded-lg border border-white/10">
-            <div className="w-8 h-8 bg-white/10 text-[#00d2ff] rounded-full flex items-center justify-center font-bold mb-3">1</div>
-            <h4 className="font-semibold text-white text-sm mb-1">Fill Details</h4>
-            <p className="text-xs text-white/60">Enter student information and upload photo in the left panel. The preview updates instantly.</p>
-          </div>
-          <div className="bg-black/20 p-4 rounded-lg border border-white/10">
-            <div className="w-8 h-8 bg-white/10 text-[#00d2ff] rounded-full flex items-center justify-center font-bold mb-3">2</div>
-            <h4 className="font-semibold text-white text-sm mb-1">Customize Colors</h4>
-            <p className="text-xs text-white/60">Change Primary and Secondary colors to match the school's branding in the right panel.</p>
-          </div>
-          <div className="bg-black/20 p-4 rounded-lg border border-white/10">
-            <div className="w-8 h-8 bg-white/10 text-[#00d2ff] rounded-full flex items-center justify-center font-bold mb-3">3</div>
-            <h4 className="font-semibold text-white text-sm mb-1">Generate PDF</h4>
-            <p className="text-xs text-white/60">Click "Print / Save PDF" to download a high-quality printable version of the ID card.</p>
-          </div>
-        </div>
-      </div>
+      {/* Guide Section */}
+      <section className="mt-20 grid md:grid-cols-2 gap-10">
+         <div className="bg-slate-50 border border-slate-100 rounded-[2.5rem] p-10">
+            <h3 className="text-xl font-black text-slate-900 mb-6 uppercase tracking-tight flex items-center gap-3">
+              <Sparkles className="text-primary" /> How to use?
+            </h3>
+            <div className="space-y-6">
+              {[
+                { step: '01', title: 'Identity Profile', desc: 'Fill in the student details, school name, and upload the photo/logo.' },
+                { step: '02', title: 'Pick Template', desc: 'Switch between modern, classic, or badge templates in the right panel.' },
+                { step: '03', title: 'Theme Adjust', desc: 'Pick primary/secondary colors to match the school or organization brand.' },
+                { step: '04', title: 'Fast Export', desc: 'Click Print/Save PDF to get a high-quality, pre-scaled ID card instantly.' }
+              ].map(item => (
+                <div key={item.step} className="flex gap-4">
+                  <span className="text-primary font-black text-lg">{item.step}</span>
+                  <div>
+                    <h4 className="text-slate-900 font-bold text-sm mb-1">{item.title}</h4>
+                    <p className="text-slate-500 text-xs leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+         </div>
+
+         <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 flex flex-col justify-center text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="text-primary" size={32} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-4 uppercase tracking-tight">Standard Dimension Output</h3>
+            <p className="text-slate-500 text-sm font-medium leading-relaxed max-w-sm mx-auto mb-8">
+              Every ID card is precisely rendered at 86mm x 54mm (CR80 standard), perfect for PVC printing or pouch lamination.
+            </p>
+            <div className="flex items-center justify-center gap-2 py-3 px-6 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest w-fit mx-auto shadow-xl">
+              <Printer size={16} className="text-primary" /> Print-Ready PDF
+            </div>
+         </div>
+      </section>
     </div>
   );
 }

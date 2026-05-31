@@ -24,100 +24,89 @@
   --color-orange-200: #fed7aa;
   --color-orange-500: #f97316;
   --color-amber-500: #f59e0b;
-  
-  --color-emerald-500: #10b981;
-  --color-emerald-600: #059669;
 }
 
 :root {
-  --bg: #0f0c29;
-  --accent-blue: #24243e;
-  --accent-purple: #302b63;
-  --primary: #7b61ff;
-  --secondary: #00d2ff;
-  --glass: rgba(255, 255, 255, 0.08);
-  --glass-hover: rgba(255, 255, 255, 0.12);
-  --glass-border: rgba(255, 255, 255, 0.15);
-  --text: #ffffff;
-  --text-dim: rgba(255, 255, 255, 0.6);
+  --bg: #ffffff;
+  --accent-light: #f1f5f9;
+  --accent-blue: #e2e8f0;
+  --primary: #2563eb;
+  --secondary: #0ea5e9;
+  --glass: rgba(255, 255, 255, 0.7);
+  --glass-hover: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --text: #0f172a;
+  --text-dim: #64748b;
 }
 
 body {
-  background: linear-gradient(135deg, var(--bg), var(--accent-purple), var(--accent-blue));
+  background: var(--bg);
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+    radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+    radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+  background-attachment: fixed;
+  background-color: #f8fafc;
   color: var(--text);
   min-height: 100vh;
-  background-attachment: fixed;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Subtle pattern for background */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2v-4h4v-2h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2v-4h4v-2H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  z-index: -1;
 }
 
 @layer utilities {
   .glass-panel {
     background: var(--glass);
     border: 1px solid var(--glass-border);
+    backdrop-filter: blur(12px);
     border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   }
   .glass-panel-hover {
-    transition: transform 0.2s ease, background 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .glass-panel-hover:hover {
     background: var(--glass-hover);
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    border-color: rgba(37, 99, 235, 0.2);
   }
   .text-gradient {
-    background: linear-gradient(to right, var(--secondary), var(--primary));
+    background: linear-gradient(to right, #2563eb, #7c3aed);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
   
-  /* Custom ReactCrop Styles for better corner dragging */
-  .ReactCrop__drag-handle {
-    width: 16px !important;
-    height: 16px !important;
-    background-color: var(--secondary) !important;
-    border: 2px solid #fff !important;
-    border-radius: 50% !important;
-  }
-  .ReactCrop__drag-handle::after {
-    display: none !important;
-  }
-  .ReactCrop__crop-selection {
-    border: 2px solid var(--secondary) !important;
-  }
-  
-  /* Scanner-like guide lines */
-  .ReactCrop__crop-selection::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.2);
-    pointer-events: none;
-  }
-  .ReactCrop__crop-selection::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: rgba(255, 255, 255, 0.2);
-    pointer-events: none;
-  }
   .btn-primary {
-    background: linear-gradient(to right, var(--primary), var(--secondary));
+    background: linear-gradient(to right, #2563eb, #3b82f6);
     color: white;
     border: none;
-    transition: opacity 0.2s ease;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
   }
   .btn-primary:hover {
-    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(37, 99, 235, 0.3);
   }
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
   .input-glass {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--glass-border);
-    color: var(--text);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
     padding: 0.6rem 0.8rem;
     border-radius: 0.75rem;
     font-size: 0.875rem;
@@ -125,17 +114,18 @@ body {
   }
   .input-glass:focus {
     outline: none;
-    border-color: var(--primary);
-    background: rgba(0, 0, 0, 0.3);
-    box-shadow: 0 0 0 4px rgba(123, 97, 255, 0.1);
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
   }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+}
+
+@keyframes progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-progress {
+  animation: progress 1.5s infinite linear;
 }
 
 /* Custom Scrollbar */
@@ -145,16 +135,25 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.2);
+  background: #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.2);
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.3);
+  background: #94a3b8;
+}
+
+/* ReactCrop Styles for White Theme */
+.ReactCrop__drag-handle {
+  background-color: #2563eb !important;
+  border: 2px solid #fff !important;
+}
+.ReactCrop__crop-selection {
+  border: 2px solid #2563eb !important;
 }
 
 /* Print Styles */
@@ -162,6 +161,9 @@ body {
   body {
     background: white !important;
     color: black !important;
+  }
+  body::before {
+    display: none;
   }
   body * {
     visibility: hidden;
@@ -176,7 +178,7 @@ body {
     width: 210mm !important;
     height: 297mm !important;
     margin: 0 !important;
-    padding: 20mm !important;
+    padding: 10mm !important;
     box-shadow: none !important;
     background: white !important;
     z-index: 9999;

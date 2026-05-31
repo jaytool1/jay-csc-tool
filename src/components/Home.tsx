@@ -1,6 +1,6 @@
 import React from 'react';
 import { Page } from '../App';
-import { FileText, Image as ImageIcon, Crop, IdCard, Printer, ArrowRight, FileType, Maximize, Combine, Scissors, RotateCw, Baseline, Hash, Key, ShieldCheck, Search } from 'lucide-react';
+import { FileText, Image as ImageIcon, Crop, IdCard, Printer, ArrowRight, FileType, Maximize, Combine, Scissors, RotateCw, Baseline, Hash, Key, ShieldCheck, Search, Type } from 'lucide-react';
 
 interface HomeProps {
   onNavigate: (page: Page) => void;
@@ -45,6 +45,14 @@ export function Home({ onNavigate }: HomeProps) {
       description: 'Auto-fit WhatsApp images into A4 grids for easy passport/ID printing.',
       icon: <Printer className="w-8 h-8 text-rose-500" />,
       color: 'bg-rose-50',
+    },
+    {
+      id: 'photo-name-joiner' as Page,
+      title: 'Photo Name Joiner',
+      description: 'Add name and date professional overlays to your photos for exam forms.',
+      icon: <Type className="w-8 h-8 text-indigo-500" />,
+      color: 'bg-indigo-50',
+      popular: true,
     },
     {
       id: 'image-to-pdf' as Page,
@@ -119,31 +127,28 @@ export function Home({ onNavigate }: HomeProps) {
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-16 pb-24 lg:pt-24 lg:pb-32">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none"></div>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-4xl bg-gradient-to-b from-white/5 to-transparent pointer-events-none -z-10"></div>
-        
+      <section className="relative overflow-hidden pt-16 pb-24 lg:pt-32 lg:pb-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-panel text-white/80 text-sm font-medium mb-10">
-            <span className="flex h-2 w-2 rounded-full bg-[#00d2ff] animate-pulse"></span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-sm font-semibold mb-10 shadow-sm">
+            <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
             100% Free & Secure Client-Side Tools
           </div>
-          <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-white mb-8 leading-[1.1] md:leading-[0.95] drop-shadow-2xl">
+          <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-slate-900 mb-8 leading-[1.1] md:leading-[0.95]">
             Jay CSC Tool <br className="hidden md:block" /><span className="text-gradient">Modern Edition</span>
           </h1>
-          <p className="mt-4 text-xl text-white/60 max-w-2xl mx-auto mb-10">
+          <p className="mt-4 text-xl text-slate-600 max-w-2xl mx-auto mb-12 font-medium">
             Premium utilities for CSC VLEs and common users. Fast, privacy-focused, and works completely offline in your browser. No data is uploaded to our servers.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <button 
               onClick={() => onNavigate('pan-resizer')}
-              className="px-8 py-3.5 text-base font-medium btn-primary rounded-xl hover:shadow-lg transition-all active:scale-95"
+              className="px-10 py-4 text-base font-bold btn-primary rounded-2xl hover:shadow-xl transition-all active:scale-95"
             >
               Start with PAN Resizer
             </button>
             <button 
               onClick={() => onNavigate('id-maker')}
-              className="px-8 py-3.5 text-base font-medium text-white glass-panel hover:bg-white/10 transition-all active:scale-95"
+              className="px-10 py-4 text-base font-bold text-slate-900 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
             >
               Try Multi ID Maker
             </button>
@@ -152,66 +157,66 @@ export function Home({ onNavigate }: HomeProps) {
       </section>
 
       {/* Tools Grid Section */}
-      <section className="py-16">
+      <section className="py-20 bg-white/50 backdrop-blur-sm border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
             <div className="text-left">
-              <h2 className="text-3xl font-bold text-white">Popular Tools</h2>
-              <p className="mt-2 text-white/60">Everything you need to process documents quickly.</p>
+              <h2 className="text-4xl font-[900] text-slate-900 tracking-tight">Popular Tools</h2>
+              <p className="mt-2 text-slate-500 font-medium text-lg">Everything you need to process documents quickly.</p>
             </div>
             
             <div className="relative w-full md:w-96">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-white/40" />
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-slate-400" />
               </div>
               <input
                 type="text"
-                placeholder="Search tools (e.g. PAN, PDF, Resize)..."
+                placeholder="Search tools (e.g. PAN, PDF)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl leading-5 bg-white/5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#00d2ff]/50 focus:border-[#00d2ff] transition-all"
+                className="block w-full pl-12 pr-4 py-4 border border-slate-200 rounded-2xl leading-5 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all shadow-sm"
               />
             </div>
           </div>
 
           {filteredTools.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredTools.map((tool) => (
                 <div 
                   key={tool.id}
                   onClick={() => onNavigate(tool.id)}
-                  className="group relative glass-panel p-6 glass-panel-hover cursor-pointer overflow-hidden flex flex-col items-start h-full"
+                  className="group relative glass-panel p-8 glass-panel-hover cursor-pointer overflow-hidden flex flex-col items-start h-full"
                 >
                   {tool.popular && (
-                    <div className="absolute top-4 right-4 px-2.5 py-1 bg-gradient-to-r from-[#7b61ff] to-[#00d2ff] text-white text-xs font-bold rounded-full shadow-sm">
-                      POPULAR
+                    <div className="absolute top-6 right-6 px-3 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-black rounded-full shadow-lg tracking-widest uppercase">
+                      Popular
                     </div>
                   )}
-                  <div className={`w-[44px] h-[44px] rounded-xl bg-primary/20 text-[#7b61ff] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                  <div className={`w-[56px] h-[56px] rounded-2xl bg-slate-100 text-primary flex items-center justify-center mb-8 group-hover:scale-110 transition-transform shadow-sm`}>
                     {tool.icon}
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-[#00d2ff] transition-colors">
+                  <h3 className="text-2xl font-bold text-slate-900 mb-3 group-hover:text-primary transition-colors tracking-tight">
                     {tool.title}
                   </h3>
-                  <p className="text-white/60 text-sm mb-6 line-clamp-2">
+                  <p className="text-slate-500 text-sm font-medium mb-8 line-clamp-3 leading-relaxed">
                     {tool.description}
                   </p>
-                  <div className="flex items-center text-[#00d2ff] font-medium text-sm mt-auto">
-                    Use Tool <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                  <div className="flex items-center text-primary font-bold text-sm mt-auto group/btn">
+                    Use Tool <ArrowRight className="w-4 h-4 ml-1 group-hover/btn:translate-x-1 transition-transform" />
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-20 glass-panel">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 text-white/20 mb-4">
-                <Search size={32} />
+            <div className="text-center py-24 glass-panel bg-white">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-50 text-slate-300 mb-6 border border-slate-100">
+                <Search size={40} />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">No tools found</h3>
-              <p className="text-white/60">Try searching for something else like "PAN" or "PDF".</p>
+              <h3 className="text-2xl font-black text-slate-900 mb-2">No tools found</h3>
+              <p className="text-slate-500 font-medium">Try searching for something else like "PAN" or "PDF".</p>
               <button 
                 onClick={() => setSearchQuery('')}
-                className="mt-6 text-[#00d2ff] hover:underline"
+                className="mt-8 text-primary font-bold hover:underline"
               >
                 Clear search
               </button>
@@ -221,23 +226,23 @@ export function Home({ onNavigate }: HomeProps) {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 border-t border-white/15">
+      <section className="py-24 border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="p-6 glass-panel">
-              <div className="w-12 h-12 bg-white/10 text-[#00d2ff] rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">1</div>
-              <h4 className="text-lg font-bold text-white mb-2">100% Private</h4>
-              <p className="text-white/60 text-sm">All processing happens in your browser. We never upload your sensitive documents.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
+            <div className="p-10 glass-panel bg-white">
+              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl font-black border border-blue-100">1</div>
+              <h4 className="text-xl font-[800] text-slate-900 mb-3 tracking-tight">100% Private</h4>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">All processing happens directly in your browser. We never upload your sensitive documents to any server.</p>
             </div>
-            <div className="p-6 glass-panel">
-              <div className="w-12 h-12 bg-white/10 text-[#00d2ff] rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">2</div>
-              <h4 className="text-lg font-bold text-white mb-2">Lightning Fast</h4>
-              <p className="text-white/60 text-sm">No waiting for server uploads or downloads. Instant results using modern web tech.</p>
+            <div className="p-10 glass-panel bg-white">
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl font-black border border-emerald-100">2</div>
+              <h4 className="text-xl font-[800] text-slate-900 mb-3 tracking-tight">Lightning Fast</h4>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">No waiting for client-server roundtrips. Experience instant results powered by modern web technologies.</p>
             </div>
-            <div className="p-6 glass-panel">
-              <div className="w-12 h-12 bg-white/10 text-[#00d2ff] rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">3</div>
-              <h4 className="text-lg font-bold text-white mb-2">Always Free</h4>
-              <p className="text-white/60 text-sm">No hidden charges, no watermarks, no registration required. Built for the community.</p>
+            <div className="p-10 glass-panel bg-white">
+              <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl font-black border border-amber-100">3</div>
+              <h4 className="text-xl font-[800] text-slate-900 mb-3 tracking-tight">Always Free</h4>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">No hidden charges, no watermark, and no registration required. Built with ❤️ for the community.</p>
             </div>
           </div>
         </div>

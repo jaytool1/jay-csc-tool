@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Page } from '../App';
-import { FileImage, FileType, Download, Upload, Trash2, MoveUp, MoveDown, Maximize, Minimize } from 'lucide-react';
+import { FileImage, FileType, Download, Upload, Trash2, MoveUp, MoveDown, Maximize, Minimize, Loader2, Check, Sparkles } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { jsPDF } from 'jspdf';
 
@@ -184,22 +184,22 @@ export function ImageTools({ onNavigate, initialTool = 'pdf' }: ImageToolsProps)
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
           <button 
             onClick={() => setActiveTool('pdf')}
-            className={`px-6 py-2 rounded-full font-bold transition-all flex items-center gap-2 ${
-              activeTool === 'pdf' ? 'bg-[#7b61ff] text-white shadow-lg' : 'bg-white/5 text-white/60 hover:bg-white/10'
+            className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${
+              activeTool === 'pdf' ? 'bg-white text-primary shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            <FileType size={18} /> Image to PDF
+            <FileType size={16} /> Images to PDF
           </button>
           <button 
             onClick={() => setActiveTool('resize')}
-            className={`px-6 py-2 rounded-full font-bold transition-all flex items-center gap-2 ${
-              activeTool === 'resize' ? 'bg-[#00d2ff] text-white shadow-lg' : 'bg-white/5 text-white/60 hover:bg-white/10'
+            className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${
+              activeTool === 'resize' ? 'bg-white text-secondary shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            <Maximize size={18} /> Image Resizer
+            <Maximize size={16} /> Ultra Resizer
           </button>
         </div>
         
@@ -207,9 +207,16 @@ export function ImageTools({ onNavigate, initialTool = 'pdf' }: ImageToolsProps)
           <button 
             onClick={generatePdf}
             disabled={isGeneratingPdf}
-            className="px-8 py-2 btn-primary rounded-lg font-bold flex items-center gap-2 disabled:opacity-50"
+            className="px-10 py-3 btn-primary rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-70 shadow-xl shadow-primary/20 transition-all active:scale-95"
           >
-            {isGeneratingPdf ? 'Converting...' : <><Download size={18} /> Download PDF</>}
+            {isGeneratingPdf ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                <span>Generating...</span>
+              </>
+            ) : (
+              <><Download size={18} /> Export PDF</>
+            )}
           </button>
         )}
       </div>
@@ -218,31 +225,31 @@ export function ImageTools({ onNavigate, initialTool = 'pdf' }: ImageToolsProps)
         <div className="space-y-8">
           <div 
             {...getPdfRootProps()} 
-            className={`glass-panel p-12 border-2 border-dashed transition-all cursor-pointer text-center ${
-              isPdfDragActive ? 'border-[#7b61ff] bg-[#7b61ff]/10' : 'border-white/15 hover:border-white/30'
+            className={`glass-panel p-16 border-2 border-dashed transition-all cursor-pointer text-center bg-white ${
+              isPdfDragActive ? 'border-primary bg-primary/5' : 'border-slate-200 hover:border-primary/50 bg-slate-50/30'
             }`}
           >
             <input {...getPdfInputProps()} />
-            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 text-[#7b61ff]">
+            <div className="w-20 h-20 bg-white shadow-lg border border-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-6 text-primary">
               <Upload size={32} />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Upload Images to Convert</h2>
-            <p className="text-white/60">Drag & drop images here, or click to select files</p>
-            <p className="text-xs text-white/40 mt-2">Supports JPG, PNG, WEBP</p>
+            <h2 className="text-2xl font-black text-slate-900 mb-2 uppercase tracking-tight">Convert Images to PDF</h2>
+            <p className="text-slate-500 font-medium">Select multiple images to combine into a single professional PDF</p>
+            <p className="text-[10px] font-black text-slate-400 mt-4 uppercase tracking-[0.2em]">Supports JPG • PNG • WEBP</p>
           </div>
 
           {pdfImages.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
               {pdfImages.map((img, index) => (
-                <div key={img.id} className="glass-panel p-2 relative group">
-                  <img src={img.preview} alt="Preview" className="w-full aspect-[3/4] object-cover rounded" />
-                  <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => removePdfImage(img.id)} className="p-1 bg-red-500 text-white rounded shadow-lg"><Trash2 size={14} /></button>
-                    <button onClick={() => movePdfImage(index, 'up')} className="p-1 bg-slate-800 text-white rounded shadow-lg"><MoveUp size={14} /></button>
-                    <button onClick={() => movePdfImage(index, 'down')} className="p-1 bg-slate-800 text-white rounded shadow-lg"><MoveDown size={14} /></button>
+                <div key={img.id} className="bg-white border border-slate-200 p-2 rounded-2xl shadow-sm relative group hover:shadow-xl transition-all duration-300">
+                  <img src={img.preview} alt="Preview" className="w-full aspect-[3/4] object-cover rounded-xl" />
+                  <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100">
+                    <button onClick={() => removePdfImage(img.id)} className="p-2 bg-red-500 text-white rounded-xl shadow-lg hover:bg-red-600 transition-colors"><Trash2 size={16} /></button>
+                    <button onClick={() => movePdfImage(index, 'up')} className="p-2 bg-slate-900 text-white rounded-xl shadow-lg hover:bg-slate-800 transition-colors"><MoveUp size={16} /></button>
+                    <button onClick={() => movePdfImage(index, 'down')} className="p-2 bg-slate-900 text-white rounded-xl shadow-lg hover:bg-slate-800 transition-colors"><MoveDown size={16} /></button>
                   </div>
-                  <div className="mt-2 text-[10px] text-white/60 truncate px-1">
-                    Page {index + 1}
+                  <div className="mt-3 px-2 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Page {index + 1}</span>
                   </div>
                 </div>
               ))}
@@ -250,49 +257,54 @@ export function ImageTools({ onNavigate, initialTool = 'pdf' }: ImageToolsProps)
           )}
         </div>
       ) : (
-        <div className="grid lg:grid-cols-2 gap-8">
-          <div className="space-y-6">
+        <div className="grid lg:grid-cols-2 gap-10">
+          <div className="space-y-8">
             <div 
               {...getResizeRootProps()} 
-              className={`glass-panel p-12 border-2 border-dashed transition-all cursor-pointer text-center ${
-                isResizeDragActive ? 'border-[#00d2ff] bg-[#00d2ff]/10' : 'border-white/15 hover:border-white/30'
+              className={`glass-panel p-12 border-2 border-dashed transition-all cursor-pointer text-center bg-white ${
+                isResizeDragActive ? 'border-secondary bg-secondary/5' : 'border-slate-200 hover:border-secondary/50 bg-slate-50/30'
               }`}
             >
               <input {...getResizeInputProps()} />
               {resizeImage ? (
-                <div className="relative">
-                  <img src={resizeImage.preview} alt="To resize" className="max-h-48 mx-auto rounded shadow-lg mb-4" />
-                  <p className="text-sm text-white font-medium">{resizeImage.file.name}</p>
-                  <p className="text-xs text-white/60">{(resizeImage.file.size / 1024).toFixed(1)} KB</p>
+                <div className="relative group">
+                  <div className="relative overflow-hidden rounded-2xl shadow-2xl inline-block border border-slate-100">
+                    <img src={resizeImage.preview} alt="To resize" className="max-h-60 object-contain" />
+                    <div className="absolute inset-0 bg-secondary/10 group-hover:bg-transparent transition-colors"></div>
+                  </div>
+                  <div className="mt-4">
+                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight truncate max-w-xs mx-auto">{resizeImage.file.name}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Current Size: {(resizeImage.file.size / 1024).toFixed(1)} KB</p>
+                  </div>
                 </div>
               ) : (
                 <>
-                  <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 text-[#00d2ff]">
+                  <div className="w-20 h-20 bg-white shadow-lg border border-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-6 text-secondary">
                     <Maximize size={32} />
                   </div>
-                  <h2 className="text-xl font-bold text-white mb-2">Upload Image to Resize</h2>
-                  <p className="text-white/60">Drag & drop an image here</p>
+                  <h2 className="text-2xl font-black text-slate-900 mb-2 uppercase tracking-tight">Upload to Resize</h2>
+                  <p className="text-slate-500 font-medium">Compress images to exact file size limits</p>
                 </>
               )}
             </div>
 
-            <div className="glass-panel p-6">
-              <h3 className="font-bold text-white mb-4">Resize Settings</h3>
-              <div className="space-y-4">
+            <div className="bg-white border border-slate-200 rounded-[2rem] p-10 shadow-sm">
+              <h3 className="font-black text-slate-900 mb-8 uppercase tracking-widest text-xs border-b border-slate-100 pb-4">Compression Settings</h3>
+              <div className="space-y-8">
                 <div>
-                  <label className="block text-xs font-medium text-white/60 mb-2 uppercase tracking-wider">Target File Size</label>
-                  <div className="flex gap-2">
+                  <label className="block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-[0.2em]">Target Output Size</label>
+                  <div className="flex gap-4">
                     <input 
                       type="number" 
                       value={targetSize} 
                       onChange={(e) => setTargetSize(Number(e.target.value))}
-                      className="input-glass rounded p-2 flex-grow text-white"
-                      placeholder="Enter size"
+                      className="bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 flex-grow text-slate-900 font-bold focus:ring-4 focus:ring-secondary/10 focus:outline-none transition-all"
+                      placeholder="e.g. 50"
                     />
                     <select 
                       value={sizeUnit} 
                       onChange={(e) => setSizeUnit(e.target.value as 'KB' | 'MB')}
-                      className="input-glass rounded p-2 bg-slate-800 text-white border-white/15"
+                      className="bg-slate-900 text-white rounded-2xl px-8 py-4 font-black text-xs uppercase tracking-widest cursor-pointer border-none"
                     >
                       <option value="KB">KB</option>
                       <option value="MB">MB</option>
@@ -303,44 +315,96 @@ export function ImageTools({ onNavigate, initialTool = 'pdf' }: ImageToolsProps)
                 <button 
                   onClick={handleResize}
                   disabled={!resizeImage || isResizing}
-                  className="w-full py-3 bg-[#00d2ff] text-white rounded-lg font-bold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-5 bg-secondary text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-70 flex items-center justify-center gap-3 shadow-xl shadow-secondary/20 relative overflow-hidden active:scale-[0.98]"
                 >
-                  {isResizing ? 'Processing...' : <><Minimize size={18} /> Resize Image Now</>}
+                  {isResizing ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      <span>Optimizing...</span>
+                    </>
+                  ) : (
+                    <><Minimize size={20} /> Resize Image Now</>
+                  )}
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="glass-panel p-8 flex flex-col items-center justify-center bg-black/20 min-h-[400px]">
+          <div className="bg-slate-950 rounded-[2.5rem] p-10 flex flex-col items-center justify-center min-h-[500px] relative overflow-hidden shadow-2xl">
+            <div className="absolute inset-0 opacity-10 pointer-events-none">
+              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-secondary/40 via-transparent to-transparent"></div>
+            </div>
+
             {resizedResult ? (
-              <div className="text-center space-y-6">
-                <div className="relative inline-block">
-                  <img src={resizedResult.url} alt="Resized" className="max-h-[400px] rounded shadow-2xl border border-white/10" />
-                  <div className="absolute -top-3 -right-3 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">
-                    SUCCESS
+              <div className="text-center space-y-10 relative z-10 w-full">
+                <div className="relative inline-block group">
+                  <div className="absolute -inset-4 bg-secondary/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity rounded-full"></div>
+                  <img src={resizedResult.url} alt="Resized" className="max-h-[400px] rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5 relative z-10 mx-auto" />
+                  <div className="absolute -top-4 -right-4 bg-white text-slate-900 text-[10px] font-black px-4 py-2 rounded-full shadow-2xl z-20 flex items-center gap-2">
+                    <Check size={14} className="text-secondary" /> OPTIMIZED
                   </div>
                 </div>
-                <div>
-                  <p className="text-white font-bold">Resized Successfully!</p>
-                  <p className="text-white/60 text-sm">New Size: {(resizedResult.size / 1024).toFixed(1)} KB</p>
+                <div className="space-y-2">
+                  <p className="text-white font-black text-2xl uppercase tracking-tight">Processing Complete</p>
+                  <p className="text-slate-400 font-bold text-sm tracking-widest uppercase">Final Size: {(resizedResult.size / 1024).toFixed(1)} KB</p>
                 </div>
                 <a 
                   href={resizedResult.url} 
                   download={`resized_${resizeImage?.file.name}`}
-                  className="inline-flex items-center gap-2 px-8 py-3 btn-primary rounded-lg font-bold"
+                  className="inline-flex items-center gap-3 px-12 py-5 btn-primary rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-105 transition-transform"
                 >
-                  <Download size={18} /> Download Resized Image
+                  <Download size={20} /> Download Result
                 </a>
               </div>
             ) : (
-              <div className="text-center text-white/40">
-                <FileImage size={48} className="mx-auto mb-4 opacity-20" />
-                <p>Resized preview will appear here</p>
+              <div className="text-center text-slate-700 relative z-10">
+                <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/5">
+                  <FileImage size={48} className="opacity-20" />
+                </div>
+                <p className="font-black text-xs uppercase tracking-[0.3em] opacity-40">Output Preview Area</p>
               </div>
             )}
           </div>
         </div>
       )}
+
+      {/* Guide Section */}
+      <section className="mt-24 grid md:grid-cols-2 gap-10">
+         <div className="bg-slate-50 border border-slate-100 rounded-[2.5rem] p-10">
+            <h3 className="text-xl font-black text-slate-900 mb-6 uppercase tracking-tight flex items-center gap-3">
+              <Sparkles className="text-secondary" /> How to use?
+            </h3>
+            <div className="space-y-6">
+              {[
+                { step: '01', title: 'Upload Image', desc: 'Drag and drop your JPG, PNG, or GIF files into the workspace area.' },
+                { step: '02', title: 'Set Dimensions', desc: 'Enter your desired width and height, or use the maintain aspect ratio toggle.' },
+                { step: '03', title: 'Optimize Quality', desc: 'Adjust the quality slider to find the perfect balance between file size and clarity.' },
+                { step: '04', title: 'Export File', desc: 'Preview your changes in real-time and click download to save the processed file.' }
+              ].map(item => (
+                <div key={item.step} className="flex gap-4">
+                  <span className="text-secondary font-black text-lg">{item.step}</span>
+                  <div>
+                    <h4 className="text-slate-900 font-bold text-sm mb-1">{item.title}</h4>
+                    <p className="text-slate-500 text-xs leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+         </div>
+
+         <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 flex flex-col justify-center text-center">
+            <div className="w-16 h-16 bg-secondary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Maximize className="text-secondary" size={32} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-4 uppercase tracking-tight">HD Image Engine</h3>
+            <p className="text-slate-500 text-sm font-medium leading-relaxed max-w-sm mx-auto mb-8">
+              Our advanced resizing algorithm preserves details while minimizing storage footprint.
+            </p>
+            <div className="flex items-center justify-center gap-2 py-3 px-6 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest w-fit mx-auto shadow-xl">
+              <Download size={16} className="text-secondary" /> Lossless Processing
+            </div>
+         </div>
+      </section>
     </div>
   );
 }
